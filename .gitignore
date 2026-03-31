@@ -1,0 +1,20 @@
+# Build
+cmake-build-debug/
+cmake-build-release/
+build/
+.cmake/
+
+# CLion
+.idea/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Compiled
+*.o
+*.exe
+*.out
