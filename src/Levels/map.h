@@ -4,13 +4,17 @@
 
 #ifndef PLATFORMER_MAP_H
 #define PLATFORMER_MAP_H
+#include <vector>
+#include <SFML/Graphics.hpp>
 
 
 
 class map {
-
+private:
+	std::vector<sf::Texture> layersTextures;
+	std::vector<sf::Sprite> layersSprites;
+	
 };
-
 
 
 #endif //PLATFORMER_MAP_H
