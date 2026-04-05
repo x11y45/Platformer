@@ -9,11 +9,11 @@
 #include "UI/PauseMenu.h"
 #include "UI/GameOverScreen.h"
 #include "UI/HUD.h"
+#include "Levels/map.h"
 
 class Game {
 public:
     Game();
-    
     void run();
 
 private:

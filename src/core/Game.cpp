@@ -89,7 +89,9 @@ void Game::render() {
         case GameState::PLAYING:
             // Render world
             window.setView(worldView);
-            // TODO: Render level and entities
+            // Render map (parallax + tiles)
+            gameMap.render(window, worldView);
+            // TODO: Render entities
             
             // Render UI
             window.setView(uiView);
@@ -99,7 +101,9 @@ void Game::render() {
         case GameState::PAUSED:
             // Render world (frozen)
             window.setView(worldView);
-            // TODO: Render level and entities
+            // Render map (parallax + tiles)
+            gameMap.render(window, worldView);
+            // TODO: Render entities
             
             // Render pause menu
             window.setView(uiView);
@@ -117,6 +121,7 @@ void Game::render() {
     }
     window.display();
 }
+
 // input handling implementations
 void Game::handleMainMenuInput(const sf::Vector2f worldMousePos) {
     // TODO: Menu navigation
