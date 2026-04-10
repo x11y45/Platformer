@@ -23,7 +23,7 @@ set(BUILD_SHARED_LIBS   OFF)      # static linking — no .dll/.so files to ship
 FetchContent_MakeAvailable(SFML)
 # ─────────────────────────────────────────────────────────────────────
 
-file(GLOB_RECURSE SOURCES "src/*.cpp")
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.cpp")
 add_executable(Platformer ${SOURCES})
 
 target_include_directories(Platformer PRIVATE src/)

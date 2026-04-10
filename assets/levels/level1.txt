@@ -1,0 +1,29 @@
+# Basic level info
+name=Level 1
+mapCSV=assets/levels/level1.csv
+timeLimit=120.0
+targetScore=1000
+
+# Tile registry: Tile.<Id>=<Path>,<TileType>,<Solid>,<Harmful>,<SpawnMarker>
+Tile.0=,EMPTY,false,false,false
+Tile.1=assets/level1/maps/layers/sliced-tileset/ground.png,PLATFORM,true,false,false
+Tile.2=assets/level1/maps/layers/sliced-tileset/slope.png,SPIKE,false,true,false
+Tile.3=assets/level1/maps/layers/sliced-tileset/under-ground.png,WALL,true,false,false
+Tile.4=assets/level1/maps/layers/sliced-tileset/window.png,COLLECTIBLE,false,false,false
+Tile.90=,EMPTY,false,false,true
+
+# Player animations: Player.<AnimationName>=<Path>,<FrameCount>
+Player.Idle=assets/level1/sprites/player/idle.png,4
+Player.Run=assets/level1/sprites/player/run.png,8
+Player.Jump=assets/level1/sprites/player/jump.png,3
+Player.Fall=assets/level1/sprites/player/fall.png,2
+
+# Enemy templates: EnemyTemplate.<Name>.Stats=<Damage>,<Speed>,<Health>,<CanMove>,<CanJump>,<CanAttack>,<JumpStrength>,<HitboxW>,<HitboxH>,<OffsetX>,<OffsetY>
+# EnemyTemplate.<Name>.Anim.<State>=<Path>,<FrameCount>
+EnemyTemplate.Skull.Stats=10,90,3,true,false,false,0,48,32,12,6
+EnemyTemplate.Skull.Anim.Run=assets/level1/sprites/enemies/Skull.png,4
+EnemySpawn.90=Skull
+
+# Map layers: MapLayer.<LayerName>=<Path>,<ParallaxFactor>
+MapLayer.Background=assets/level1/maps/layers/background.png,0
+MapLayer.Midground=assets/level1/maps/layers/middleground.png,0.5

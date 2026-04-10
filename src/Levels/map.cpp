@@ -6,10 +6,41 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <algorithm>
+#include <cmath>
 
-map::map() : tileSize(64), gridWidth(0), gridHeight(0), lastCameraPos(0.f, 0.f) {}
+map::map() : tileSize(16), gridWidth(0), gridHeight(0), lastCameraPos(0.f, 0.f) {
+}
+
+void map::init(
+	const std::map<int, TileDefinition>& tileDefinitions,
+	const std::map<std::string,std::pair<std::string, float>>& layerFiles
+) {
+	for (const auto& tileEntry : tileDefinitions) {
+		registerTileType(
+			tileEntry.second.id,
+			tileEntry.second.imagePath,
+			tileEntry.second.type,
+			tileEntry.second.isSolid,
+			tileEntry.second.isHarmful,
+			tileEntry.second.isSpawnMarker
+		);
+	}
+
+	for (const auto& layerEntry : layerFiles) {
+		const std::string& name = layerEntry.first;
+		const std::string& filepath = layerEntry.second.first;
+		const float parallaxFactor = layerEntry.second.second;
+		if (addParallaxLayer(filepath, parallaxFactor, name)) {
+			std::cout << "Loaded parallax layer: " << name << " with factor " << parallaxFactor << std::endl;
+		} else {
+			std::cerr << "Failed to load parallax layer: " << name << std::endl;
+		}
+	}
+}
 
 bool map::addParallaxLayer(const std::string& filepath, float parallaxFactor, const std::string& name) {
+
 	ParallaxLayer layer;
 	layer.parallaxFactor = parallaxFactor;
 	layer.name = name;
@@ -19,57 +50,114 @@ bool map::addParallaxLayer(const std::string& filepath, float parallaxFactor, co
 		return false;
 	}
 	
-	layer.sprite.setTexture(layer.texture);
-	parallaxLayers.push_back(layer);
+	parallaxLayers.push_back(std::move(layer));
+	refreshParallaxTextureBindings();
 	
 	return true;
 }
 
-void map::updateParallax(const sf::Vector2f& cameraPosition) {
-	sf::Vector2f cameraDelta = cameraPosition - lastCameraPos;
-	
+void map::refreshParallaxTextureBindings() {
 	for (auto& layer : parallaxLayers) {
-		sf::Vector2f currentPos = layer.sprite.getPosition();
-		layer.sprite.setPosition(
-			currentPos.x - cameraDelta.x * layer.parallaxFactor,
-			currentPos.y - cameraDelta.y * layer.parallaxFactor
-		);
+		layer.spriteA.setTexture(layer.texture);
+		layer.spriteB.setTexture(layer.texture);
 	}
-	
-	lastCameraPos = cameraPosition;
+}
+
+void map::updateParallax(const sf::Vector2f& cameraPosition, const sf::Vector2f& cameraViewSize) {
+	for (auto& layer : parallaxLayers) {
+		const sf::Vector2u textureSize = layer.texture.getSize();
+		if (textureSize.x == 0 || textureSize.y == 0) {
+			continue;
+		}
+
+		const float textureWidth = static_cast<float>(textureSize.x);
+		const float textureHeight = static_cast<float>(textureSize.y);
+		const float targetWidth = cameraViewSize.x * 1.5f;
+		const float targetHeight = cameraViewSize.y * 1.5f;
+		const float scale = std::max(targetWidth / textureWidth, targetHeight / textureHeight);
+
+		layer.spriteA.setScale(scale, scale);
+		layer.spriteB.setScale(scale, scale);
+
+		const float spriteWidth = textureWidth * scale;
+		const float spriteHeight = textureHeight * scale;
+		if (spriteWidth <= 0.f) {
+			continue;
+		}
+
+		const float viewLeft = cameraPosition.x - cameraViewSize.x * 0.5f;
+		const float viewTop = cameraPosition.y - cameraViewSize.y * 0.5f;
+		const float parallaxOffsetX = cameraPosition.x * layer.parallaxFactor;
+		float wrappedOffsetX = std::fmod(parallaxOffsetX, spriteWidth);
+		if (wrappedOffsetX < 0.f) {
+			wrappedOffsetX += spriteWidth;
+		}
+
+		const float baseX = viewLeft - (spriteWidth - cameraViewSize.x) * 0.5f - wrappedOffsetX;
+		const float baseY = viewTop - (spriteHeight - cameraViewSize.y) * 0.5f;
+		layer.spriteA.setPosition(baseX, baseY);
+		layer.spriteB.setPosition(baseX + spriteWidth, baseY);
+	}
 }
 
 void map::renderParallax(sf::RenderTarget& target, bool renderBackground) {
 	for (const auto& layer : parallaxLayers) {
-		// Background layers have factor < 1.0
-		// Foreground layers have factor >= 1.0
-		bool isBackground = layer.parallaxFactor < 1.0f;
-		
-		if (isBackground == renderBackground) {
-			target.draw(layer.sprite);
+		if (layer.spriteA.getTexture()) {
+			target.draw(layer.spriteA);
+		}
+		if (layer.spriteB.getTexture()) {
+			target.draw(layer.spriteB);
 		}
 	}
 }
 
-void map::registerTileType(int id, const std::string& imagePath, TileType type, bool isSolid, bool isHarmful) {
+void map::registerTileType(int id, const std::string& imagePath, TileType type, bool isSolid, bool isHarmful, bool isSpawnMarker) {
 	TileDefinition def;
 	def.id = id;
 	def.imagePath = imagePath;
 	def.type = type;
 	def.isSolid = isSolid;
 	def.isHarmful = isHarmful;
+	def.isSpawnMarker = isSpawnMarker;
 	
 	tileRegistry[id] = def;
 	
 	// Load texture for this tile type
-	if (id != 0) { // Don't load texture for empty tiles
+	if (id != 0 && !imagePath.empty()) { // Don't load texture for empty or marker tiles
 		sf::Texture texture;
 		if (texture.loadFromFile(imagePath)) {
+			texture.setSmooth(false);
 			tileTextures[id] = std::move(texture);
 		} else {
 			std::cerr << "Failed to load tile texture: " << imagePath << std::endl;
 		}
 	}
+}
+
+void map::configureTileSprite(Tile& tile, int tileId) {
+	if (tileTextures.count(tileId) == 0) {
+		return;
+	}
+
+	const sf::Texture& texture = tileTextures[tileId];
+	tile.sprite.setTexture(texture);
+	tile.sprite.setOrigin(0.f, 0.f);
+
+	const sf::FloatRect worldBounds = getTileWorldBounds(tile);
+	tile.sprite.setPosition(worldBounds.left, worldBounds.top);
+
+	const sf::Vector2u textureSize = texture.getSize();
+	if (textureSize.x == 0 || textureSize.y == 0) {
+		return;
+	}
+	// this one is for scaling the tile sprite to fit the tile size defined in the map, so nothing is more than tile size 16x16.
+	const int sourceWidth = static_cast<int>(textureSize.x);
+	const int sourceHeight = static_cast<int>(textureSize.y);
+	tile.sprite.setTextureRect({0, 0, sourceWidth, sourceHeight});
+	tile.sprite.setScale(
+		worldBounds.width / static_cast<float>(sourceWidth),
+		worldBounds.height / static_cast<float>(sourceHeight)
+	);
 }
 
 std::vector<std::vector<int>> map::parseCSV(const std::string& filepath) {
@@ -110,38 +198,35 @@ void map::buildTileGrid(const std::vector<std::vector<int>>& csvData) {
 		return;
 	}
 	
-	gridHeight = csvData.size();
-	gridWidth = csvData[0].size();
+	const int csvHeight = static_cast<int>(csvData.size());
+	const int csvWidth = static_cast<int>(csvData[0].size());
+	gridHeight = csvHeight;
+	gridWidth = csvWidth;
 	
 	// Initialize grid
-	tileGrid.resize(gridHeight);
+	tileGrid.assign(gridHeight, std::vector<Tile>(gridWidth));
 	for (int row = 0; row < gridHeight; ++row) {
-		tileGrid[row].resize(gridWidth);
-	}
-	
-	// Build tiles from CSV data
-	for (int row = 0; row < gridHeight; ++row) {
-		for (int col = 0; col < gridWidth && col < static_cast<int>(csvData[row].size()); ++col) {
-			int tileId = csvData[row][col];
-			
+		for (int col = 0; col < gridWidth; ++col) {
 			Tile& tile = tileGrid[row][col];
 			tile.gridX = col;
 			tile.gridY = row;
+		}
+	}
+	
+	// Build tiles from CSV data
+	for (int row = 0; row < csvHeight; ++row) {
+		for (int col = 0; col < csvWidth && col < static_cast<int>(csvData[row].size()); ++col) {
+			int tileId = csvData[row][col];
+			
+			Tile& tile = tileGrid[row][col];
+			tile.id = tileId;
 			
 			if (tileId == 0) {
 				tile.type = TileType::EMPTY;
 			} else if (tileRegistry.count(tileId) > 0) {
 				const TileDefinition& def = tileRegistry[tileId];
 				tile.type = def.type;
-				
-				// Set up sprite if texture exists
-				if (tileTextures.count(tileId) > 0) {
-					tile.sprite.setTexture(tileTextures[tileId]);
-					tile.sprite.setPosition(
-						static_cast<float>(col * tileSize),
-						static_cast<float>(row * tileSize)
-					);
-				}
+				configureTileSprite(tile, tileId);
 			} else {
 				std::cerr << "Unknown tile ID: " << tileId << " at (" << col << ", " << row << ")" << std::endl;
 				tile.type = TileType::EMPTY;
@@ -158,32 +243,33 @@ bool map::loadFromCSV(const std::string& filepath) {
 		return false;
 	}
 	
+	tileGrid.clear();
 	buildTileGrid(csvData);
 	return true;
 }
 
 void map::renderTiles(sf::RenderTarget& target, const sf::View& cameraView) {
 	// Get camera bounds for culling
-	sf::Vector2f viewCenter = cameraView.getCenter();
-	sf::Vector2f viewSize = cameraView.getSize();
+	const sf::Vector2f viewCenter = cameraView.getCenter();
+	const sf::Vector2f viewSize = cameraView.getSize();
 	
-	float left = viewCenter.x - viewSize.x / 2.f;
-	float right = viewCenter.x + viewSize.x / 2.f;
-	float top = viewCenter.y - viewSize.y / 2.f;
-	float bottom = viewCenter.y + viewSize.y / 2.f;
+	const float left = viewCenter.x - viewSize.x / 2.f;
+	const float right = viewCenter.x + viewSize.x / 2.f;
+	const float top = viewCenter.y - viewSize.y / 2.f;
+	const float bottom = viewCenter.y + viewSize.y / 2.f;
 	
-	// Convert to grid coordinates with margin
-	int startCol = std::max(0, static_cast<int>(left / tileSize) - 1);
-	int endCol = std::min(gridWidth, static_cast<int>(right / tileSize) + 2);
-	int startRow = std::max(0, static_cast<int>(top / tileSize) - 1);
-	int endRow = std::min(gridHeight, static_cast<int>(bottom / tileSize) + 2);
+	// Convert to grid coordinates with margin using floor/ceil.
+	const int startCol = std::max(0, static_cast<int>(std::floor(left / static_cast<float>(tileSize))) - 1);
+	const int endCol = std::min(gridWidth, static_cast<int>(std::ceil(right / static_cast<float>(tileSize))) + 1);
+	const int startRow = std::max(0, static_cast<int>(std::floor(top / static_cast<float>(tileSize))) - 1);
+	const int endRow = std::min(gridHeight, static_cast<int>(std::ceil(bottom / static_cast<float>(tileSize))) + 1);
 	
 	// Render visible tiles only
 	for (int row = startRow; row < endRow; ++row) {
 		for (int col = startCol; col < endCol; ++col) {
 			const Tile& tile = tileGrid[row][col];
 			
-			if (tile.type != TileType::EMPTY) {
+			if (tile.type != TileType::EMPTY && tile.sprite.getTexture()) {
 				target.draw(tile.sprite);
 			}
 		}
@@ -196,7 +282,6 @@ Tile* map::getTileAt(float x, float y) {
 	
 	return getTileAtGrid(col, row);
 }
-
 Tile* map::getTileAtGrid(int col, int row) {
 	if (row >= 0 && row < gridHeight && col >= 0 && col < gridWidth) {
 		return &tileGrid[row][col];
@@ -206,17 +291,8 @@ Tile* map::getTileAtGrid(int col, int row) {
 
 bool map::isSolidAt(float x, float y) {
 	Tile* tile = getTileAt(x, y);
-	if (tile && tile->type != TileType::EMPTY) {
-		// Check tile registry for solid property
-		for (const auto& pair : tileRegistry) {
-			if (pair.second.type == tile->type) {
-				return pair.second.isSolid;
-			}
-		}
-	}
-	return false;
+	return tile && isTileSolid(*tile);
 }
-
 bool map::isHarmfulAt(float x, float y) {
 	Tile* tile = getTileAt(x, y);
 	if (tile && tile->type != TileType::EMPTY) {
@@ -249,7 +325,7 @@ std::vector<Tile*> map::getCollidingTiles(const sf::FloatRect& bounds) {
 	for (int row = startRow; row < endRow; ++row) {
 		for (int col = startCol; col < endCol; ++col) {
 			Tile* tile = getTileAtGrid(col, row);
-			if (tile && tile->type != TileType::EMPTY) {
+			if (tile && isTileSolid(*tile)) {
 				collidingTiles.push_back(tile);
 			}
 		}
@@ -258,15 +334,33 @@ std::vector<Tile*> map::getCollidingTiles(const sf::FloatRect& bounds) {
 	return collidingTiles;
 }
 
+sf::FloatRect map::getTileWorldBounds(const Tile& tile) const {
+	const float worldX = static_cast<float>(tile.gridX * tileSize);
+	const float worldY = static_cast<float>(tile.gridY * tileSize);
+	const float size = static_cast<float>(tileSize);
+	return {worldX, worldY, size, size};
+}
+
+bool map::isTileSolid(const Tile& tile) const {
+	if (tile.type == TileType::EMPTY) {
+		return false;
+	}
+	for (const auto& tileEntry : tileRegistry) {
+		if (tileEntry.second.type == tile.type) {
+			return tileEntry.second.isSolid;
+		}
+	}
+	return false;
+}
+
+void map::update(const sf::View &cameraView) {
+	updateParallax(cameraView.getCenter(), cameraView.getSize());
+}
+
 void map::render(sf::RenderTarget& target, const sf::View& cameraView) {
-	// Render background parallax layers (factor < 1.0)
-	renderParallax(target, true);
-	
-	// Render tile grid
+	updateParallax(cameraView.getCenter(), cameraView.getSize());
+	renderParallax(target);
 	renderTiles(target, cameraView);
-	
-	// Render foreground parallax layers (factor >= 1.0)
-	renderParallax(target, false);
 }
 
 int map::getParallaxLayerCount() const {
@@ -293,6 +387,14 @@ int map::getTileSize() const {
 	return tileSize;
 }
 
+ParallaxLayer map::getParallaxLayer(int index) const {
+	if (index >= 0 && index < static_cast<int>(parallaxLayers.size())) {
+		return parallaxLayers[index];
+	}
+	std::cout << "Warning: Requested parallax layer index " << index << " is out of bounds." << std::endl;
+	return {}; // Return empty layer if index is out of bounds
+}
+
 sf::Vector2i map::getGridDimensions() const {
-	return sf::Vector2i(gridWidth, gridHeight);
+	return {gridWidth, gridHeight};
 }

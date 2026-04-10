@@ -19,23 +19,26 @@ enum class TileType {
 };
 
 struct TileDefinition {
-	int id;
+	int id{0};
 	std::string imagePath;
 	TileType type;
-	bool isSolid;
-	bool isHarmful;
+	bool isSolid{false};
+	bool isHarmful{false};
+	bool isSpawnMarker{false};
 };
 
 struct Tile {
-	TileType type;
+	int id{0};
+	TileType type{TileType::EMPTY};
 	sf::Sprite sprite;
-	int gridX;
-	int gridY;
+	int gridX{0};
+	int gridY{0};
 };
 
 struct ParallaxLayer {
 	sf::Texture texture;
-	sf::Sprite sprite;
+	sf::Sprite spriteA;
+	sf::Sprite spriteB;
 	float parallaxFactor;
 	std::string name;
 };
@@ -46,11 +49,16 @@ public:
 	
 	// Parallax layer management
 	bool addParallaxLayer(const std::string& filepath, float parallaxFactor, const std::string& name);
-	void updateParallax(const sf::Vector2f& cameraPosition);
+	void updateParallax(const sf::Vector2f& cameraPosition, const sf::Vector2f& cameraViewSize);
 	void renderParallax(sf::RenderTarget& target, bool renderBackground = true);
+
+	void init(
+		const std::map<int, TileDefinition>& tileDefinitions,
+		const std::map<std::string,std::pair<std::string, float>>& layerFiles
+	);
 	
 	// Tile system
-	void registerTileType(int id, const std::string& imagePath, TileType type, bool isSolid, bool isHarmful);
+	void registerTileType(int id, const std::string& imagePath, TileType type, bool isSolid, bool isHarmful, bool isSpawnMarker = false);
 	bool loadFromCSV(const std::string& filepath);
 	void renderTiles(sf::RenderTarget& target, const sf::View& cameraView);
 	
@@ -60,13 +68,16 @@ public:
 	bool isSolidAt(float x, float y);
 	bool isHarmfulAt(float x, float y);
 	std::vector<Tile*> getCollidingTiles(const sf::FloatRect& bounds);
+	sf::FloatRect getTileWorldBounds(const Tile& tile) const;
 	
-	// Complete render
+	// main functions
+	void update(const sf::View& cameraView);
 	void render(sf::RenderTarget& target, const sf::View& cameraView);
 	
 	// Utilities
 	int getParallaxLayerCount() const;
 	void setLayerParallaxFactor(int index, float factor);
+	ParallaxLayer getParallaxLayer(int index) const;
 	void clear();
 	int getTileSize() const;
 	sf::Vector2i getGridDimensions() const;
@@ -87,6 +98,9 @@ private:
 	// Helper methods
 	void buildTileGrid(const std::vector<std::vector<int>>& csvData);
 	std::vector<std::vector<int>> parseCSV(const std::string& filepath);
+	bool isTileSolid(const Tile& tile) const;
+	void configureTileSprite(Tile& tile, int tileId);
+	void refreshParallaxTextureBindings();
 };
 
 

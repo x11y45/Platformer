@@ -5,12 +5,38 @@
 #ifndef PLATFORMER_LEVELMENU_H
 #define PLATFORMER_LEVELMENU_H
 
+#include <vector>
+#include <SFML/Graphics.hpp>
 
+class LevelManager;
 
-class LevelMenu {
-	
+enum class LevelMenuActionType {
+	None,
+	Back,
+	SelectLevel
 };
 
+struct LevelMenuAction {
+	LevelMenuActionType type{LevelMenuActionType::None};
+	int levelId{-1};
+};
 
+class LevelMenu {
+public:
+	LevelMenu(sf::Vector2u screenSize);
+	void init(const LevelManager& levelManager);
+	void update(float dt);
+	void render(sf::RenderWindow& window) const;
+	LevelMenuAction handleInput(const sf::Vector2f& worldMousePos) const;
 
-#endif //PLATFORMER_LEVELMENU_H
+private:
+	float screenX;
+	float screenY;
+	sf::Texture levelButtonTexture;
+	sf::Texture backButtonTexture;
+	sf::Sprite backButtonSprite;
+	std::vector<int> levelIds;
+	std::vector<sf::Sprite> levelButtons;
+};
+
+#endif // PLATFORMER_LEVELMENU_H

@@ -1,5 +1,6 @@
 #include "CameraController.hpp"
 #include <algorithm>
+#include <cmath>
 
 CameraController::CameraController(float viewWidth, float viewHeight)
     : target(nullptr)
@@ -38,6 +39,12 @@ void CameraController::update(float dt) {
     
     view.setCenter(newCenter);
     clampToBounds();
+
+    // Pixel-snap view center to avoid horizontal/vertical subpixel shimmer.
+    sf::Vector2f snappedCenter = view.getCenter();
+    snappedCenter.x = std::round(snappedCenter.x);
+    snappedCenter.y = std::round(snappedCenter.y);
+    view.setCenter(snappedCenter);
 }
 
 sf::View& CameraController::getView() {

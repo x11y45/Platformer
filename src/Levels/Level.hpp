@@ -9,6 +9,14 @@
 #include <memory>
 #include <SFML/Graphics.hpp>
 #include "map.h"
+#include "Entities/Player.h"
+#include "Entities/EnemyManager.h"
+#include "Entities/EnemyConfig.h"
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <map>
+#include "Physics/Collision.h"
 
 enum class LevelState {
 	NOT_STARTED,
@@ -20,33 +28,37 @@ enum class LevelState {
 
 struct LevelConfig {
 	std::string name;
-	std::string csvPath;
+	std::string mapCSVPath;
+	std::map<int, TileDefinition> tileDefinitions;
+	std::map<std::string, EnemyTemplate> enemyTemplates;
+	std::map<int, std::string> enemySpawnMarkers;
+	std::map<std::string,std::pair<std::string,int>> Player;
+	std::string playerName;
+	std::map<std::string,std::pair<std::string,int>> Enemies;
+	std::map<std::string,std::pair<std::string, float>> mapLayers; // Layer path + parallax factor
 	float timeLimit;              // Seconds
 	int targetScore;            // the minimum score you need to pass the level
-	sf::Vector2f playerSpawnPoint;
-	sf::Vector2f goalPosition;
 };
 
 class Level {
 public:
-	virtual ~Level();
-	
-	// Lifecycle methods (pure virtual - must implement)
-	virtual void load();
-	
-	// Lifecycle methods (default implementations provided)
-	virtual void unload();
+	~Level() = default;
+	explicit Level(std::string configPath = "assets/levels/level1.txt");
+
+	void load();
+
+	void unload();
 	
 	// Game loop methods (default implementations)
-	virtual void update(float dt);
-	virtual void render(sf::RenderTarget& target, const sf::View& view);
-	virtual void handleInput(const sf::Event& event);
-	
+	void update(float dt);
+	void render(sf::RenderTarget& target, const sf::View& view);
+	void handleInput(const sf::Event& event);
+
 	// Level logic (derived can override)
-	virtual bool isCompleted() const;
-	virtual bool isFailed() const;
-	virtual void onPlayerDeath();
-	virtual void onPlayerReachGoal();
+	bool isCompleted() const;
+	bool isFailed() const;
+	void onPlayerDeath();
+	void onPlayerReachGoal();
 	
 	// State management
 	void start();
@@ -61,24 +73,29 @@ public:
 	float getTimeElapsed() const { return timeElapsed; }
 	const map& getMap() const { return levelMap; }
 	map& getMap() { return levelMap; }
+	const sf::Vector2f& getPlayerPositionRef() const { return player.getPositionRef(); }
 	const LevelConfig& getConfig() const { return config; }
-	sf::Vector2f getPlayerSpawnPoint() const { return config.playerSpawnPoint; }
-	sf::Vector2f getGoalPosition() const { return config.goalPosition; }
+	const std::string& getConfigPath() const { return levelConfigPath; }
+	sf::Vector2f getPlayerSpawnPoint();
+	sf::Vector2f getGoalPosition();
 	
 protected:
-	Level(const std::string& levelName);
 
 	void setState(LevelState newState);
 	void addScore(int points);
 	void resetTimer();
 	void setConfig(const LevelConfig& cfg);
+	void setConfigPath(const std::string& configPath) { levelConfigPath = configPath; }
 	
 	// Level data
+	std::string levelConfigPath;
 	LevelConfig config;
 	map levelMap;
 	// Future: EntityManager entityManager;
-	
+	Player player;
+	EnemyManager enemyManager;
 	LevelState state;
+	Collision collisionSystem;
 	int score;
 	float timeElapsed;
 	int playerDeaths;

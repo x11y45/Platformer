@@ -9,7 +9,7 @@
 #include "UI/PauseMenu.h"
 #include "UI/GameOverScreen.h"
 #include "UI/HUD.h"
-#include "Levels/map.h"
+#include "Levels/LevelManager.hpp"
 
 class Game {
 public:
@@ -20,11 +20,13 @@ private:
     void processEvents();
     void update(float dt);
     void render();
-    // Handle input.
-    void handleMainMenuInput(sf::Vector2f worldMousePos);
     void handlePlayingInput();
     void handlePausedInput();
     void handleGameOverInput();
+    void configureCameraForCurrentLevel();
+    Level* getCurrentLevel();
+    const Level* getCurrentLevel() const;
+    void startLevel(int levelId);
     
     void changeState(GameState newState);
     
@@ -37,6 +39,9 @@ private:
     // Camera
     CameraController camera;
     GameState currentState;
+
+    // Level
+    LevelManager levelManager;
 
     // gmae state
     MainMenu mainMenu;

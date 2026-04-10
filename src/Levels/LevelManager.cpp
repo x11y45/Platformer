@@ -4,64 +4,87 @@
 
 #include "LevelManager.hpp"
 #include <iostream>
+#include <filesystem>
+#include <regex>
+#include <algorithm>
 
 LevelManager::LevelManager()
 	: currentLevel(nullptr)
 	, currentLevelId(-1) {
 }
 
-LevelManager::~LevelManager() {
-	unloadCurrentLevel();
+void LevelManager::registerLevel(int levelId, const std::string& levelConfigPath) {
+	levelConfigs[levelId] = levelConfigPath;
 }
 
-void LevelManager::registerLevel(int levelId, Level &level) {
-	levelFactories[levelId] = &level;
-	std::cout << "Registered level ID: " << levelId << std::endl;
+int LevelManager::autoDiscoverLevels(const std::string& levelsDirectory) {
+	levelConfigs.clear();
+	std::regex levelPattern(R"(level([0-9]+)\.txt$)");
+	int discoveredCount = 0;
+
+	try {
+		for (const auto& entry : std::filesystem::directory_iterator(levelsDirectory)) {
+			if (!entry.is_regular_file()) {
+				continue;
+			}
+
+			const std::string filename = entry.path().filename().string();
+			std::smatch match;
+			if (!std::regex_search(filename, match, levelPattern)) {
+				continue;
+			}
+
+			const int levelId = std::stoi(match[1].str());
+			registerLevel(levelId, entry.path().string());
+			discoveredCount++;
+		}
+	} catch (const std::exception& err) {
+		std::cerr << "Failed to auto-discover levels in " << levelsDirectory
+		          << ": " << err.what() << std::endl;
+	}
+
+	return discoveredCount;
+}
+
+std::vector<int> LevelManager::getRegisteredLevelIds() const {
+	std::vector<int> levelIds;
+	levelIds.reserve(levelConfigs.size());
+	for (const auto& levelEntry : levelConfigs) {
+		levelIds.push_back(levelEntry.first);
+	}
+	return levelIds;
 }
 
 bool LevelManager::loadLevel(int levelId) {
-	// Check if level factory exists
-	auto it = levelFactories.find(levelId);
-	if (it == levelFactories.end()) {
-		std::cerr << "Level ID " << levelId << " not registered!" << std::endl;
+	const auto levelIt = levelConfigs.find(levelId);
+	if (levelIt == levelConfigs.end()) {
+		std::cerr << "Level ID " << levelId << " is not registered." << std::endl;
 		return false;
 	}
 
-	unloadCurrentLevel();
-
-	try {
-		currentLevel = it->second;
-		if (currentLevel) {
-			currentLevel->load();
-			currentLevelId = levelId;
-			std::cout << "Loaded level: " << currentLevel->getConfig().name 
-			          << " (ID: " << levelId << ")" << std::endl;
-			return true;
-		}
-	} catch (const std::exception& err) {
-		std::cerr << "Failed to load level " << levelId << ": " << err.what() << std::endl;
-		currentLevel->reset();
-		currentLevelId = -1;
-		return false;
-	}
-	return false;
+	const std::string& levelPath = levelIt->second;
+	auto loadedLevel = std::make_unique<Level>(levelPath);
+	currentLevel = std::move(loadedLevel);
+	currentLevelId = levelId;
+	return true;
 }
 
 void LevelManager::unloadCurrentLevel() {
-	if (currentLevel) {
-		std::cout << "Unloading level: " << currentLevel->getConfig().name << std::endl;
-		currentLevel->unload();
-		currentLevel->reset();
+	if (!currentLevel) {
 		currentLevelId = -1;
+		return;
 	}
+	currentLevel->unload();
+	currentLevel.reset();
+	currentLevelId = -1;
 }
 
 void LevelManager::restartCurrentLevel() {
-	if (currentLevel) {
-		std::cout << "Restarting level: " << currentLevel->getConfig().name << std::endl;
-		currentLevel->reset();
-		currentLevel->start();
+	if (currentLevelId < 0) {
+		return;
 	}
+	loadLevel(currentLevelId);
+	startCurrentLevel();
 }
 
 void LevelManager::startCurrentLevel() {
@@ -101,25 +124,31 @@ void LevelManager::handleInput(const sf::Event& event) {
 }
 
 bool LevelManager::loadNextLevel() {
-	int nextLevelId = currentLevelId + 1;
-	
-	// Check if next level exists
-	if (levelFactories.find(nextLevelId) != levelFactories.end()) {
-		return loadLevel(nextLevelId);
+	if (levelConfigs.empty()) {
+		return false;
 	}
-	
-	std::cout << "No next level available (current: " << currentLevelId << ")" << std::endl;
-	return false;
+
+	if (currentLevelId < 0) {
+		return loadLevel(levelConfigs.begin()->first);
+	}
+
+	auto currentIt = levelConfigs.upper_bound(currentLevelId);
+	if (currentIt == levelConfigs.end()) {
+		return false;
+	}
+
+	return loadLevel(currentIt->first);
 }
 
 bool LevelManager::loadPreviousLevel() {
-	int prevLevelId = currentLevelId - 1;
-	
-	// Check if previous level exists
-	if (prevLevelId >= 0 && levelFactories.find(prevLevelId) != levelFactories.end()) {
-		return loadLevel(prevLevelId);
+	if (levelConfigs.empty() || currentLevelId < 0) {
+		return false;
 	}
-	
-	std::cout << "No previous level available (current: " << currentLevelId << ")" << std::endl;
-	return false;
+
+	auto currentIt = levelConfigs.lower_bound(currentLevelId);
+	if (currentIt == levelConfigs.begin()) {
+		return false;
+	}
+	--currentIt;
+	return loadLevel(currentIt->first);
 }

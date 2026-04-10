@@ -5,18 +5,21 @@
 #include "MainMenu.h"
 
 MainMenu::MainMenu(const sf::Vector2u screenSize) : screenX(static_cast<float>(screenSize.x)), screenY(static_cast<float>(screenSize.y)) {
-	init();
 }
 
-void MainMenu::init() {
-	background.loadFromFile("assets/background.png");
-	middleGround.loadFromFile("assets/middleground.png");
+void MainMenu::init(map &map) {
+	const ParallaxLayer backgroundLayer = map.getParallaxLayer(0);
+	const ParallaxLayer middleLayer = map.getParallaxLayer(1);
+
+	background = backgroundLayer.texture;
+	middleGround = middleLayer.texture;
 
 	const float scaleX = screenX / static_cast<float>(background.getSize().x);
 	const float scaleY = screenY / static_cast<float>(background.getSize().y);
 	backgroundSprite.setTexture(background);
 	backgroundSprite.setPosition(0.f,0.f);
 	backgroundSprite.setScale(scaleX,scaleY);
+
 	middleGroundSpriteA.setTexture(middleGround);
 	middleGroundSpriteA.setPosition(0.f,0.f);
 	middleGroundSpriteA.setScale(scaleX,scaleY);
@@ -61,10 +64,30 @@ void MainMenu::update(const float dt) {
 }
 
 void MainMenu::render(sf::RenderWindow& window) {
-	window.draw(backgroundSprite);
-	window.draw(middleGroundSpriteA);
-	window.draw(middleGroundSpriteB);
-	window.draw(MenuButtonSprite);
-	window.draw(PlayButtonSprite);
-	window.draw(LevelButtonSprite);
+	if (background.getSize().x > 0 && background.getSize().y > 0) {
+		window.draw(backgroundSprite);
+	}
+	if (middleGround.getSize().x > 0 && middleGround.getSize().y > 0) {
+		window.draw(middleGroundSpriteA);
+		window.draw(middleGroundSpriteB);
+	}
+	if (menuButtonTexture.getSize().x > 0 && menuButtonTexture.getSize().y > 0) {
+		window.draw(MenuButtonSprite);
+	}
+	if (playButtonTexture.getSize().x > 0 && playButtonTexture.getSize().y > 0) {
+		window.draw(PlayButtonSprite);
+	}
+	if (levelButtonTexture.getSize().x > 0 && levelButtonTexture.getSize().y > 0) {
+		window.draw(LevelButtonSprite);
+	}
+}
+
+MainMenuAction MainMenu::handleInput(const sf::Vector2f& worldMousePos) const {
+	if (PlayButtonSprite.getGlobalBounds().contains(worldMousePos)) {
+		return MainMenuAction::StartGame;
+	}
+	if (LevelButtonSprite.getGlobalBounds().contains(worldMousePos)) {
+		return MainMenuAction::OpenLevelMenu;
+	}
+	return MainMenuAction::None;
 }

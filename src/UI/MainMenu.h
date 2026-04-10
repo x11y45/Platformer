@@ -4,7 +4,13 @@
 #ifndef PLATFORMER_MAINMENU_H
 #define PLATFORMER_MAINMENU_H
 #include "SFML/Graphics.hpp"
+#include "Levels/map.h"
 
+enum class MainMenuAction {
+	None,
+	StartGame,
+	OpenLevelMenu
+};
 
 class MainMenu {
 public:
@@ -26,9 +32,10 @@ private:
 
 public:
 	MainMenu(sf::Vector2u screenSize);
-	void init();
+	void init(map &map);
 	void update(float dt);
 	void render(sf::RenderWindow& window);
+	MainMenuAction handleInput(const sf::Vector2f& worldMousePos) const;
 };
 
 
