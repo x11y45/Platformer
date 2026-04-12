@@ -4,6 +4,7 @@
 
 #include "Player.h"
 #include "Levels/map.h"
+#include <algorithm>
 #include <iostream>
 #include <cmath>
 
@@ -17,10 +18,13 @@ namespace {
 }
 
 Player::Player():
+	health(MAX_HEALTH),
+	karma(MAX_KARMA),
 	speed(200.f),
 	jumpStrength(450.f),
 	position(300.f, 300.f),
 	velocity(0.f, 0.f),
+	hurtPushRemaining(0.f, 0.f),
 	moveDirection(0.f, 0.f),
 	isMoving(false),
 	isGrounded(false),
@@ -29,6 +33,10 @@ Player::Player():
 	doubleJump(false),
 	isFalling(false),
 	deltaTime(0.f),
+	attackPhase(AttackPhase::None),
+	lifeState(LifeState::Alive),
+	attackFacingRight(true),
+	attackSequence(0),
 	width(kHitboxLocalWidth * kPlayerRenderScale),
 	height(kHitboxLocalHeight * kPlayerRenderScale),
 	hitboxOffset(
@@ -40,6 +48,10 @@ Player::Player():
 }
 
 void Player::handleInput(const sf::Event &event) {
+	if (lifeState != LifeState::Alive || animator.getState() == AnimState::NonLoop) {
+		return;
+	}
+
 	// Event-based input (for actions that should trigger once)
 	if (event.type == sf::Event::KeyPressed) {
 		switch (event.key.code) {
@@ -59,12 +71,20 @@ void Player::handleInput(const sf::Event &event) {
 			case sf::Keyboard::W:
 			case sf::Keyboard::Up:
 				if (isGrounded) {
-					isGrounded = false;
 					Jump = true;
+					isGrounded = false;
 				} else if (!doubleJump) {
 					Jump = true;
 					doubleJump = true;
 				}
+				break;
+			case sf::Keyboard::S:
+			case sf::Keyboard::Down:
+				isCrouching = true;
+				break;
+			case sf::Keyboard::X:
+			case sf::Keyboard::K:
+				startAttack();
 				break;
 			default:
 				break;
@@ -85,13 +105,17 @@ void Player::handleInput(const sf::Event &event) {
 					isMoving = false;
 				}
 				break;
+			case sf::Keyboard::S:
+			case sf::Keyboard::Down:
+				isCrouching = false;
+				break;
 			default:
 				break;
 		}
 	}
 }
 
-void Player::init(const std::map<std::string,std::pair<std::string,int>>& animations, const std::string &playerName) {
+void Player::init(const std::map<std::string, AnimationSpec>& animations, const std::string &playerName) {
 	this->name = playerName;
 	animator.loadAnimations(animations);
 	animator.setScale(kPlayerRenderScale, kPlayerRenderScale);
@@ -110,12 +134,22 @@ void Player::render(sf::RenderTarget &target) {
 void Player::update(float dt) {
 	deltaTime = dt;
 
-	isMoving = moveDirection.x != 0.f;
+	if (lifeState == LifeState::Hurt || lifeState == LifeState::Dead) {
+		velocity = {0.f, 0.f};
+		updateDamageReaction(dt);
+		updateBounds();
+		return;
+	}
+
 	if (moveDirection.x != 0.f) {
 		facingRight = moveDirection.x > 0.f;
 	}
 
 	if (isMoving) {
+		if (isGrounded && attackPhase == AttackPhase::Active) {
+			stopAttack();
+			attackPhase = AttackPhase::PendingClear; // End attack if player starts moving on ground
+		}
 		velocity.x = moveDirection.x * speed;
 	} else {
 		velocity.x = 0.f;
@@ -180,26 +214,63 @@ void Player::applyPhysics(float dt) {
 void Player::updateAnimation(float dt) {
 	animator.setFlipX(!facingRight);
 
+	if (lifeState == LifeState::Hurt) {
+		animator.update(dt);
+		animator.setPosition(position.x, position.y);
+		if ((!animator.hasAnimation("Hurt") || animator.isNonLoopEnded()) && hurtPushRemaining.x == 0.f && hurtPushRemaining.y == 0.f) {
+			lifeState = LifeState::Alive;
+		}
+		return;
+	}
+
+	if (lifeState == LifeState::Dead) {
+		animator.update(dt);
+		animator.setPosition(position.x, position.y);
+		return;
+	}
+
 	// Choose animation based on state
 	if (!isGrounded) {
-		if (velocity.y < 0) {
+		if (attackPhase == AttackPhase::Active) {
+			animator.playAnimation("JumpAttack", false);
+		} else if (velocity.y < 0) {
 			animator.playAnimation("Jump");
 		} else {
 			animator.playAnimation("Fall");
 		}
-	} else if (std::abs(velocity.x) > 0.1f) {
+	} else if (isMoving && std::abs(velocity.x) > 0.1f) {
 		animator.playAnimation("Run");
-	} else {
+	} else if (attackPhase == AttackPhase::Active) {
+		animator.playAnimation("Attack", false);
+	}else {
 		animator.playAnimation("Idle");
 	}
 
 	animator.update(dt);
+	if (attackPhase == AttackPhase::Active && animator.isNonLoopEnded()) {
+		attackPhase = AttackPhase::PendingClear;
+	}
 
 	// Position sprite
 	animator.setPosition(position.x, position.y);
 }
 
 void Player::unload() {
+}
+
+void Player::takeDamage(int damage, HitboxDirection hitDirection) {
+	if (damage <= 0 || lifeState != LifeState::Alive) {
+		return;
+	}
+
+	if (damage >= static_cast<int>(health)) {
+		health = 0;
+		beginDeath();
+		return;
+	}
+
+	health -= static_cast<unsigned int>(damage);
+	beginHurt(hitDirection);
 }
 
 void Player::setPosition(float x, float y) {
@@ -210,4 +281,104 @@ void Player::setPosition(float x, float y) {
 
 sf::FloatRect Player::getBounds() const {
 	return bounds;
+}
+
+AttackInfo Player::getAttackInfo() const {
+	AttackInfo info;
+	info.active = attackPhase != AttackPhase::None;
+	info.sequence = attackSequence;
+	info.damage = BASE_ATTACK_DAMAGE;
+	info.direction = getAttackDirection();
+	info.hitbox = getAttackBounds();
+	return info;
+}
+
+void Player::startAttack() {
+	if (attackPhase != AttackPhase::None) {
+		return;
+	}
+	attackPhase = AttackPhase::Active;
+	attackFacingRight = facingRight;
+	attackSequence++;
+}
+void Player::stopAttack() {
+	if (attackPhase == AttackPhase::Active) {
+		attackPhase = AttackPhase::PendingClear;
+	}
+}
+
+void Player::beginHurt(HitboxDirection hitDirection) {
+	attackPhase = AttackPhase::None;
+	lifeState = LifeState::Hurt;
+	isMoving = false;
+	moveDirection = {0.f, 0.f};
+	Jump = false;
+	doubleJump = false;
+	isCrouching = false;
+	velocity = {0.f, 0.f};
+
+	const float pushX = hitDirection == HitboxDirection::Right ? -HURT_PUSH_DISTANCE :
+		hitDirection == HitboxDirection::Left ? HURT_PUSH_DISTANCE : 0.f;
+	hurtPushRemaining = {pushX, -HURT_PUSH_DISTANCE};
+
+	if (animator.hasAnimation("Hurt")) {
+		animator.playAnimation("Hurt", false);
+	}
+}
+
+void Player::beginDeath() {
+	attackPhase = AttackPhase::None;
+	lifeState = LifeState::Dead;
+	isMoving = false;
+	moveDirection = {0.f, 0.f};
+	Jump = false;
+	doubleJump = false;
+	isCrouching = false;
+	velocity = {0.f, 0.f};
+	hurtPushRemaining = {0.f, 0.f};
+
+	if (animator.hasAnimation("Death")) {
+		animator.playAnimation("Death", false);
+	}
+}
+
+void Player::updateDamageReaction(float dt) {
+	if (hurtPushRemaining.x != 0.f) {
+		const float stepX = std::min(std::abs(hurtPushRemaining.x), HURT_PUSH_SPEED * dt);
+		position.x += hurtPushRemaining.x > 0.f ? stepX : -stepX;
+		hurtPushRemaining.x += hurtPushRemaining.x > 0.f ? -stepX : stepX;
+	}
+
+	if (hurtPushRemaining.y != 0.f) {
+		const float stepY = std::min(std::abs(hurtPushRemaining.y), HURT_PUSH_SPEED * dt);
+		position.y += hurtPushRemaining.y > 0.f ? stepY : -stepY;
+		hurtPushRemaining.y += hurtPushRemaining.y > 0.f ? -stepY : stepY;
+	}
+}
+
+HitboxDirection Player::getAttackDirection() const {
+	if (attackPhase == AttackPhase::None) {
+		return HitboxDirection::None;
+	}
+	return attackFacingRight ? HitboxDirection::Right : HitboxDirection::Left;
+}
+
+sf::FloatRect Player::getAttackBounds() const {
+	// Attack hitbox extends outward from player based on facing direction
+	const float attackWidth = bounds.width * ATTACK_RANGE_MULTIPLIER;
+	const float attackHeight = bounds.height;
+	
+	if (attackFacingRight) {
+		// Hitbox extends to the right
+		return {bounds.left + bounds.width, bounds.top, attackWidth, attackHeight};
+	} else {
+		// Hitbox extends to the left
+		return {bounds.left - attackWidth, bounds.top, attackWidth, attackHeight};
+	}
+}
+
+void Player::finalizeAttackFrame() {
+	if (attackPhase == AttackPhase::PendingClear) {
+		attackPhase = AttackPhase::None;
+	}
 }

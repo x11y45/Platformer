@@ -46,7 +46,7 @@ void Game::configureCameraForCurrentLevel() {
     }
     const sf::Vector2i grid = level->getMap().getGridDimensions();
     const float tileSize = static_cast<float>(level->getMap().getTileSize());
-    camera.setBounds({0.f, 0.f, grid.x * tileSize, grid.y * tileSize});
+    camera.setBounds({tileSize, 0.f, (grid.x-2) * tileSize, grid.y * tileSize});
     camera.setTarget(&level->getPlayerPositionRef());
     worldView = camera.getView();
 }
@@ -150,6 +150,10 @@ void Game::update(float dt) {
         case GameState::PLAYING:
             // Update level and player
             levelManager.update(dt);
+            if (const Level* level = getCurrentLevel(); level && level->getState() == LevelState::FAILED) {
+                changeState(GameState::GAME_OVER);
+            }
+            hud.update(dt);
             camera.update(dt);
             worldView = camera.getView();
             break;
@@ -186,7 +190,9 @@ void Game::render() {
             
             // Render UI
             window.setView(uiView);
-            // TODO: Render HUD (health, lives)
+            if (const Level* level = getCurrentLevel()) {
+                hud.render(window, level->getPlayerHealth(), level->getPlayerMaxHealth());
+            }
             break;
             
         case GameState::PAUSED:

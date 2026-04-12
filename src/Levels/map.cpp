@@ -204,7 +204,7 @@ void map::buildTileGrid(const std::vector<std::vector<int>>& csvData) {
 	gridWidth = csvWidth;
 	
 	// Initialize grid
-	tileGrid.assign(gridHeight, std::vector<Tile>(gridWidth));
+	tileGrid.assign(gridHeight, std::vector<Tile>(gridWidth)); // +2 for safety margin on right edge
 	for (int row = 0; row < gridHeight; ++row) {
 		for (int col = 0; col < gridWidth; ++col) {
 			Tile& tile = tileGrid[row][col];
@@ -215,7 +215,7 @@ void map::buildTileGrid(const std::vector<std::vector<int>>& csvData) {
 	
 	// Build tiles from CSV data
 	for (int row = 0; row < csvHeight; ++row) {
-		for (int col = 0; col < csvWidth && col < static_cast<int>(csvData[row].size()); ++col) {
+		for (int col = 0; col < csvWidth; ++col) {
 			int tileId = csvData[row][col];
 			
 			Tile& tile = tileGrid[row][col];

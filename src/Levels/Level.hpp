@@ -12,6 +12,7 @@
 #include "Entities/Player.h"
 #include "Entities/EnemyManager.h"
 #include "Entities/EnemyConfig.h"
+#include "Entities/AnimationSpec.h"
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -32,9 +33,9 @@ struct LevelConfig {
 	std::map<int, TileDefinition> tileDefinitions;
 	std::map<std::string, EnemyTemplate> enemyTemplates;
 	std::map<int, std::string> enemySpawnMarkers;
-	std::map<std::string,std::pair<std::string,int>> Player;
+	std::map<std::string, AnimationSpec> Player;
 	std::string playerName;
-	std::map<std::string,std::pair<std::string,int>> Enemies;
+	std::map<std::string, AnimationSpec> Enemies;
 	std::map<std::string,std::pair<std::string, float>> mapLayers; // Layer path + parallax factor
 	float timeLimit;              // Seconds
 	int targetScore;            // the minimum score you need to pass the level
@@ -74,6 +75,8 @@ public:
 	const map& getMap() const { return levelMap; }
 	map& getMap() { return levelMap; }
 	const sf::Vector2f& getPlayerPositionRef() const { return player.getPositionRef(); }
+	unsigned int getPlayerHealth() const { return player.getHealth(); }
+	unsigned int getPlayerMaxHealth() const { return player.getMaxHealth(); }
 	const LevelConfig& getConfig() const { return config; }
 	const std::string& getConfigPath() const { return levelConfigPath; }
 	sf::Vector2f getPlayerSpawnPoint();
@@ -99,6 +102,7 @@ protected:
 	int score;
 	float timeElapsed;
 	int playerDeaths;
+	bool playerDeathNotified;
 	bool debugMode;
 };
 

@@ -8,17 +8,42 @@ Animator::Animator():
 	 elapsedTime(0.f)
 	, isPlaying(false)
 	, loop(true)
-	, currentFrameIndex(0){
+	, currentFrameIndex(0)
+	, animState(AnimState::None){
 	sprite.setOrigin(0.f, 96.f);
 }
 
 Animator::~Animator() = default;
 
+namespace {
 
-void Animator::loadAnimations(const std::map<std::string,std::pair<std::string,int>>& animationsData) {
+std::string chooseDefaultAnimation(const std::map<std::string, Animation>& animations) {
+	if (animations.find("Idle") != animations.end()) {
+		return "Idle";
+	}
+	if (animations.find("Run") != animations.end()) {
+		return "Run";
+	}
+	if (animations.find("Walk") != animations.end()) {
+		return "Walk";
+	}
+
+	for (const auto& [name, animation] : animations) {
+		(void)animation;
+		if (name != "Death") {
+			return name;
+		}
+	}
+
+	return animations.empty() ? std::string{} : animations.begin()->first;
+}
+
+}
+
+void Animator::loadAnimations(const std::map<std::string, AnimationSpec>& animationsData) {
 	for (const auto& [name, animData] : animationsData) {
-		const std::string& texturePath = animData.first;
-		int frameCount = animData.second;
+		const std::string& texturePath = animData.path;
+		int frameCount = animData.frameCount;
 
 		if (!textures[name].loadFromFile(texturePath)) {
 			std::cerr << "Failed to load animation texture: " << texturePath << std::endl;
@@ -32,19 +57,12 @@ void Animator::loadAnimations(const std::map<std::string,std::pair<std::string,i
 		for (int i = 0; i < frameCount; ++i) {
 			frames.emplace_back(i * frameWidth, 0, frameWidth, frameHeight);
 		}
-		addAnimation(name, frames, 0.12f); // Default frame duration
-		
-		// Set first animation as default
-		if (currentAnimation.empty()) {
-			sprite.setTexture(textures[name]);
-			playAnimation(name);
-		}
+		addAnimation(name, frames, animData.frameDuration);
 	}
 
-	if (animations.find("Idle") != animations.end()) {
-		playAnimation("Idle");
-	} else if (!animations.empty()) {
-		playAnimation(animations.begin()->first);
+	const std::string defaultAnimation = chooseDefaultAnimation(animations);
+	if (!defaultAnimation.empty()) {
+		playAnimation(defaultAnimation);
 	}
 }
 
@@ -58,6 +76,7 @@ void Animator::playAnimation(const std::string& name, bool loopAnim) {
 	if (animations.find(name) != animations.end() && textures.find(name) != textures.end()) {
 		currentAnimation = name;
 		this->loop = loopAnim;
+		ChangeState(loop ? AnimState::Loop : AnimState::NonLoop);
 		isPlaying = true;
 		elapsedTime = 0.f;
 		currentFrameIndex = 0;
@@ -66,6 +85,7 @@ void Animator::playAnimation(const std::string& name, bool loopAnim) {
 	}
 }
 void Animator::stopAnimation() {
+	ChangeState(AnimState::None);
 	isPlaying = false;
 }
 void Animator::update(float dt) {
@@ -80,6 +100,7 @@ void Animator::update(float dt) {
 					currentFrameIndex = 0;
 				} else {
 					currentFrameIndex = anim.frames.size() - 1;
+					ChangeState(AnimState::None);
 					isPlaying = false;
 				}
 			}
@@ -108,22 +129,16 @@ void Animator::render(sf::RenderTarget& target) {
 	}
 }
 
-void Animator::setPosition(float x, float y) {
-	sprite.setPosition(x, y);
+void Animator::ChangeState(const AnimState State) {
+	if (animState == AnimState::NonLoop && State != AnimState::NonLoop ){nonLopingAnimEnded = true;}
+	else {nonLopingAnimEnded = false;}
+	animState = State;
 }
 
-void Animator::setScale(float x, float y) {
-	sprite.setScale(x, y);
-}
-void Animator::setOrigin(float x, float y) {
-	sprite.setOrigin(x, y);
-}
-
-void Animator::setFlipX(bool flipped) {
+void Animator::setFlipX(const bool flipped) {
 	if (flipX == flipped) {
 		return;
 	}
-
 	flipX = flipped;
 	setFrame();
 }

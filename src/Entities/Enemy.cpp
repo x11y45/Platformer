@@ -7,8 +7,16 @@
 #include <cmath>
 
 namespace {
-	constexpr float kEnemyGravity = 980.f;
-	constexpr float kEnemyTerminalVelocity = 600.f;
+	/**
+	 * this is the constants of the enemy
+	 * the firs two are for physics, the @kEnemyDetectionRangeX/Y are for player tracking, if the player is within those ranges the enemy will start chasing him.
+	 * the @kEnemyPatrolRangeX is how far the enemy will go from his home position before turning around, this is the behavior when the player is out of range.
+	 */
+	constexpr float kEnemyGravity = 1500.f;
+	constexpr float kEnemyTerminalVelocity = 100.f;
+	constexpr float kEnemyDetectionRangeX = 2000.f;
+	constexpr float kEnemyDetectionRangeY = 200.f;
+	constexpr float kEnemyPatrolRangeX = 120.f;
 }
 
 Enemy::Enemy()
@@ -19,7 +27,11 @@ Enemy::Enemy()
 	, bounds(0.f, 0.f, 32.f, 32.f)
 	, grounded(false)
 	, facingRight(true)
-	, alive(true) {
+	, alive(true)
+	, deathAnimationStarted(false)
+	, deathAnimationFinished(false)
+	, patrolDirection(1)
+	, enemyId(-1) {
 	fallbackShape.setFillColor(sf::Color(180, 70, 70, 220));
 }
 
@@ -31,11 +43,15 @@ Enemy::Enemy(const EnemyTemplate& config, const sf::Vector2f& spawnPosition)
 
 void Enemy::configure(const EnemyTemplate& config, const sf::Vector2f& spawnPosition) {
 	definition = config;
+	homePosition = spawnPosition;
 	position = spawnPosition;
 	velocity = {0.f, 0.f};
 	grounded = false;
 	facingRight = true;
 	alive = true;
+	deathAnimationStarted = false;
+	deathAnimationFinished = false;
+	patrolDirection = 1;
 }
 
 void Enemy::load() {
@@ -65,6 +81,14 @@ void Enemy::setTargetPlayerPosition(const sf::Vector2f* playerPosition) {
 	targetPlayerPosition = playerPosition;
 }
 
+void Enemy::setId(int id) {
+	enemyId = id;
+}
+
+int Enemy::getId() const {
+	return enemyId;
+}
+
 void Enemy::setPosition(const sf::Vector2f& worldPosition) {
 	position = worldPosition;
 	updateBounds();
@@ -92,10 +116,58 @@ bool Enemy::isAlive() const {
 }
 
 void Enemy::takeDamage(int amount) {
+	if (!alive) {
+		return;
+	}
+
 	definition.health -= amount;
 	if (definition.health <= 0) {
 		alive = false;
+		deathAnimationStarted = false;
+		deathAnimationFinished = !animator.hasAnimation("Death");
 	}
+}
+
+void Enemy::updatePatrolMovement() {
+	const float patrolOffset = position.x - homePosition.x;
+	if (patrolOffset >= kEnemyPatrolRangeX) {
+		patrolDirection = -1;
+	} else if (patrolOffset <= -kEnemyPatrolRangeX) {
+		patrolDirection = 1;
+	}
+
+	velocity.x = static_cast<float>(patrolDirection) * definition.speed;
+	facingRight = patrolDirection > 0;
+}
+
+void Enemy::onHit(int damage, HitboxDirection hitDirection) {
+	// Only process feedback if cooldown has elapsed
+	if (timeSinceLastHit > 0.f) {
+		return;
+	}
+
+	// Apply knockback based on hit direction
+	// Simple knockback implementation: push away from hit direction
+	const float knockbackStrength = 150.f;
+	switch (hitDirection) {
+		case HitboxDirection::Right:
+			// Hit from left, push right
+			velocity.x = knockbackStrength;
+			break;
+		case HitboxDirection::Left:
+			// Hit from right, push left
+			velocity.x = -knockbackStrength;
+			break;
+		case HitboxDirection::None:
+			// No directional knockback
+			break;
+	}
+	
+	// Add slight upward knockback
+	velocity.y = std::max(velocity.y, -100.f);
+	
+	// Start cooldown
+	timeSinceLastHit = HIT_FEEDBACK_COOLDOWN;
 }
 
 void Enemy::updateBounds() {
@@ -118,7 +190,6 @@ void Enemy::updateAnimation(float dt) {
 	if (!animator.hasAnimations()) {
 		return;
 	}
-
 	animator.setFlipX(!facingRight);
 	if (!grounded) {
 		if (velocity.y < 0.f) {
@@ -135,19 +206,48 @@ void Enemy::updateAnimation(float dt) {
 	animator.setPosition(position.x, position.y);
 }
 
-void Enemy::update(float dt) {
-	if (!alive) {
+void Enemy::updateDeathAnimation(float dt) {
+	if (!animator.hasAnimations()) {
 		return;
 	}
 
-	if (definition.canMove && targetPlayerPosition && std::abs(targetPlayerPosition->x - position.x) < 2000.f && std::abs(targetPlayerPosition->y - position.y) < 200.f) {
+	if (!deathAnimationStarted) {
+		if (animator.hasAnimation("Death")) {
+			animator.playAnimation("Death", false);
+		}
+		deathAnimationStarted = true;
+	}
+
+	animator.update(dt);
+	deathAnimationFinished = !animator.hasAnimation("Death") || animator.isNonLoopEnded();
+	animator.setPosition(position.x, position.y);
+}
+
+void Enemy::update(float dt) {
+	if (!alive) {
+		updateDeathAnimation(dt);
+		syncVisuals();
+		return;
+	}
+
+	// Update hit feedback cooldown
+	if (timeSinceLastHit > 0.f) {
+		timeSinceLastHit -= dt;
+	}
+
+	const bool playerInRange = targetPlayerPosition &&
+		std::abs(targetPlayerPosition->x - position.x) < kEnemyDetectionRangeX &&
+		std::abs(targetPlayerPosition->y - position.y) < kEnemyDetectionRangeY;
+
+	if (definition.canMove && playerInRange) {
 		const float direction = targetPlayerPosition->x >= position.x ? 1.f : -1.f;
 		velocity.x = direction * definition.speed;
 		facingRight = direction > 0.f;
+	} else if (definition.canMove) {
+		updatePatrolMovement();
 	} else {
-		// TODO: goes left to right and back if the player is too far or not set.
+		velocity.x = 0.f;
 	}
-
 	if (definition.canJump && grounded && targetPlayerPosition) {
 		const float verticalGap = position.y - targetPlayerPosition->y;
 		const float horizontalGap = std::abs(targetPlayerPosition->x - position.x);
@@ -183,9 +283,9 @@ void Enemy::update(float dt) {
 		}
 
 		if (collisionResult.left || collisionResult.right) {
-			velocity.x = !velocity.x;
-			facingRight = !facingRight;
-			velocity.x = facingRight ? definition.speed : -definition.speed;
+			patrolDirection *= -1;
+			velocity.x = static_cast<float>(patrolDirection) * definition.speed;
+			facingRight = patrolDirection > 0;
 		}
 
 		updateBounds();

@@ -49,6 +49,21 @@ std::vector<std::string> splitCommaSeparated(const std::string& value) {
 	return parts;
 }
 
+AnimationSpec parseAnimationSpec(const std::string& value, const std::string& context) {
+	const std::vector<std::string> parts = splitCommaSeparated(value);
+	if (parts.size() != 2 && parts.size() != 3) {
+		throw std::runtime_error("Invalid animation definition in " + context + ": " + value);
+	}
+
+	AnimationSpec spec;
+	spec.path = parts[0];
+	spec.frameCount = std::stoi(parts[1]);
+	if (parts.size() == 3) {
+		spec.frameDuration = std::stof(parts[2]);
+	}
+	return spec;
+}
+
 }
 
 Level::Level(std::string configPath):
@@ -57,6 +72,7 @@ Level::Level(std::string configPath):
 	score(0),
 	timeElapsed(0.0f),
 	playerDeaths(0),
+	playerDeathNotified(false),
 	debugMode(false) {
 	load();
 }
@@ -64,6 +80,7 @@ void Level::load() {
 	config = LevelConfig{};
 	levelMap.clear();
 	enemyManager.clear();
+	playerDeathNotified = false;
 	// Load Level configuration from file txt
 	std::ifstream configFile(levelConfigPath);
 	if (!configFile.is_open()) {
@@ -135,18 +152,12 @@ void Level::load() {
 				} else if (animPos != std::string::npos) {
 					const std::string templateName = remainder.substr(0, animPos);
 					const std::string animationName = remainder.substr(animPos + 6);
-					const std::vector<std::string> parts = splitCommaSeparated(value);
-					if (parts.size() != 2) {
-						std::cerr << "Invalid enemy animation definition in level config: " << line << std::endl;
-					} else {
-						try {
-							const int frameCount = std::stoi(parts[1]);
-							EnemyTemplate& enemyTemplate = config.enemyTemplates[templateName];
-							enemyTemplate.name = templateName;
-							enemyTemplate.animations[animationName] = {parts[0], frameCount};
-						} catch (const std::exception& err) {
-							std::cerr << "Failed to parse enemy animation: " << err.what() << std::endl;
-						}
+					try {
+						EnemyTemplate& enemyTemplate = config.enemyTemplates[templateName];
+						enemyTemplate.name = templateName;
+						enemyTemplate.animations[animationName] = parseAnimationSpec(value, line);
+					} catch (const std::exception& err) {
+						std::cerr << "Failed to parse enemy animation: " << err.what() << std::endl;
 					}
 				}
 			} else if (key.rfind("EnemySpawn.", 0) == 0) {
@@ -163,19 +174,17 @@ void Level::load() {
 				config.targetScore = std::stoi(value);
 			} else if (key.rfind("Player.", 0) == 0) {
 				std::string animName = key.substr(7); // Remove "Player."
-				size_t animDelimiter = value.find(',');
-				if (animDelimiter != std::string::npos) {
-					std::string animPath = value.substr(0, animDelimiter);
-					int frameCount = std::stoi(value.substr(animDelimiter + 1));
-					config.Player[animName] = {animPath, frameCount};
+				try {
+					config.Player[animName] = parseAnimationSpec(value, line);
+				} catch (const std::exception& err) {
+					std::cerr << "Failed to parse player animation: " << err.what() << std::endl;
 				}
 			} else if (key.rfind("Enemy.", 0) == 0) {
 				std::string enemyName = key.substr(6); // Remove "Enemy."
-				size_t animDelimiter = value.find(',');
-				if (animDelimiter != std::string::npos) {
-					std::string animPath = value.substr(0, animDelimiter);
-					int frameCount = std::stoi(value.substr(animDelimiter + 1));
-					config.Enemies[enemyName] = {animPath, frameCount};
+				try {
+					config.Enemies[enemyName] = parseAnimationSpec(value, line);
+				} catch (const std::exception& err) {
+					std::cerr << "Failed to parse enemy animation: " << err.what() << std::endl;
 				}
 			} else if (key.rfind("MapLayer.", 0) == 0) {
 				std::string layerName = key.substr(9); // Remove "MapLayer."
@@ -216,6 +225,7 @@ void Level::unload() {
 	score = 0;
 	timeElapsed = 0.0f;
 	playerDeaths = 0;
+	playerDeathNotified = false;
 }
 
 void Level::update(float dt) {
@@ -226,7 +236,14 @@ void Level::update(float dt) {
 	player.update(dt);
 	CollisionResult collisionResult = collisionSystem.resolveMapCollision(player.getBounds(), levelMap);
 	player.updateMovementsStates(collisionResult);
-	enemyManager.update(dt, levelMap, player.getPositionRef());
+	enemyManager.resolvePlayerAttack(player.getAttackInfo());
+	player.finalizeAttackFrame();
+	enemyManager.update(dt, levelMap, player);
+
+	if (!playerDeathNotified && player.isDeathAnimationFinished()) {
+		onPlayerDeath();
+		playerDeathNotified = true;
+	}
 
 	timeElapsed += dt;
 }
@@ -267,13 +284,13 @@ bool Level::isCompleted() const {
 bool Level::isFailed() const {
 	// Default: No failure condition
 	// Derived classes can override (e.g., too many deaths, specific events)
-	return false;
+	return state == LevelState::FAILED;
 }
 
 void Level::onPlayerDeath() {
 	playerDeaths++;
+	setState(LevelState::FAILED);
 	std::cout << "Player died. Deaths: " << playerDeaths << std::endl;
-	// TODO:
 }
 void Level::onPlayerReachGoal() {
 	setState(LevelState::COMPLETED);
@@ -286,6 +303,7 @@ void Level::start() {
 		resetTimer();
 		score = 0;
 		playerDeaths = 0;
+		playerDeathNotified = false;
 		std::cout << "Level started: " << config.name << std::endl;
 	}
 }

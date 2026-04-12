@@ -8,10 +8,11 @@
 #include <SFML/Graphics.hpp>
 #include <map>
 #include <string>
+#include "AnimationSpec.h"
 
 struct EnemyTemplate {
 	std::string name;
-	std::map<std::string, std::pair<std::string, int>> animations;
+	std::map<std::string, AnimationSpec> animations;
 	int damage{1};
 	float speed{0.f};
 	int health{1};

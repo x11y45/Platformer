@@ -3,6 +3,7 @@
 //
 
 #include "EnemyManager.h"
+#include "Player.h"
 #include "Levels/map.h"
 #include <algorithm>
 #include <iostream>
@@ -16,11 +17,17 @@ void EnemyManager::load(
 	templates = templateData;
 	spawnMarkers = spawnMarkerData;
 	enemies.clear();
+	nextEnemyId = 0;
+	activeAttackSequence = -1;
+	enemiesHitThisAttack.clear();
 	spawnFromMap(levelMap);
 }
 
 void EnemyManager::clear() {
 	enemies.clear();
+	nextEnemyId = 0;
+	activeAttackSequence = -1;
+	enemiesHitThisAttack.clear();
 }
 
 void EnemyManager::spawnFromMap(map& levelMap) {
@@ -44,24 +51,88 @@ void EnemyManager::spawnFromMap(map& levelMap) {
 			}
 
 			const sf::FloatRect tileBounds = levelMap.getTileWorldBounds(*tile);
-			//Enemy *enemy = new Enemy(templateIt->second, sf::Vector2f(tileBounds.left, tileBounds.top));
 			auto enemy = std::make_unique<Enemy>(templateIt->second, sf::Vector2f(tileBounds.left, tileBounds.top));
+			enemy->setId(nextEnemyId++);
 			enemy->setLevelMap(&levelMap);
 			enemies.push_back(std::move(enemy));
 		}
 	}
 }
 
-void EnemyManager::update(float dt, map& levelMap, const sf::Vector2f& playerPosition) {
+void EnemyManager::resolvePlayerAttack(const AttackInfo& attack) {
+	// If attack is inactive, reset tracking
+	if (!attack.active) {
+		activeAttackSequence = -1;
+		enemiesHitThisAttack.clear();
+		return;
+	}
+
+	// If this is a new attack sequence, reset who we've hit
+	if (attack.sequence != activeAttackSequence) {
+		activeAttackSequence = attack.sequence;
+		enemiesHitThisAttack.clear();
+	}
+
+	// Try to hit each alive enemy
+	for (auto& enemy : enemies) {
+		if (enemy && enemy->isAlive()) {
+			tryHitEnemy(enemy.get(), attack);
+		}
+	}
+}
+
+bool EnemyManager::tryHitEnemy(Enemy* enemy, const AttackInfo& attack) {
+	if (!enemy) {
+		return false;
+	}
+
+	const int enemyId = enemy->getId();
+	
+	// Skip if already hit in this sequence
+	if (enemiesHitThisAttack.count(enemyId) > 0) {
+		return false;
+	}
+
+	// Check hitbox intersection
+	if (!attack.hitbox.intersects(enemy->getBounds())) {
+		return false;
+	}
+
+	// Apply damage and feedback
+	enemy->takeDamage(attack.damage);
+	enemy->onHit(attack.damage, attack.direction);
+	
+	// Mark as hit so we don't hit it again this sequence
+	enemiesHitThisAttack.insert(enemyId);
+	
+	return true;
+}
+
+void EnemyManager::update(float dt, map& levelMap, Player& player) {
+	const sf::FloatRect playerBounds = player.getBounds();
+	const sf::Vector2f playerTargetPosition = playerBounds.getPosition();
 	for (auto& enemy : enemies) {
 		enemy->setLevelMap(&levelMap);
-		enemy->setTargetPlayerPosition(&playerPosition);
+		enemy->setTargetPlayerPosition(&playerTargetPosition);
 		enemy->update(dt);
+
+		if (enemy && enemy->isAlive() && enemy->getDamage() > 0 && enemy->getBounds().intersects(player.getBounds())) {
+			const sf::Vector2f enemyCenter = {
+				enemy->getBounds().left + enemy->getBounds().width * 0.5f,
+				enemy->getBounds().top + enemy->getBounds().height * 0.5f
+			};
+			const sf::Vector2f playerCenter = {
+				player.getBounds().left + player.getBounds().width * 0.5f,
+				player.getBounds().top + player.getBounds().height * 0.5f
+			};
+			const HitboxDirection hitDirection = enemyCenter.x >= playerCenter.x ? HitboxDirection::Right : HitboxDirection::Left;
+			player.takeDamage(enemy->getDamage(), hitDirection);
+		}
 	}
 
 	enemies.erase(
 		std::remove_if(enemies.begin(), enemies.end(), [](const std::unique_ptr<Enemy>& enemy) {
-			return !enemy->isAlive();
+			return !enemy->isAlive() && enemy->animFinished();
 		}),
 		enemies.end()
 	);

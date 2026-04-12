@@ -7,6 +7,13 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <map>
+#include "AnimationSpec.h"
+
+enum class AnimState {
+	Loop,
+	NonLoop,
+	None
+};
 
 struct Animation {
 	std::vector<sf::IntRect> frames;
@@ -19,23 +26,29 @@ public:
 	~Animator();
 
 	// Animation management
-	void loadAnimations(const std::map<std::string,std::pair<std::string,int>>& animations);
+	void loadAnimations(const std::map<std::string, AnimationSpec>& animations);
 	void addAnimation(const std::string& name, const std::vector<sf::IntRect>& frames, float frameDuration);
+	bool hasAnimation(const std::string& name) const { return animations.find(name) != animations.end(); }
 	void playAnimation(const std::string& name, bool loop = true);
+	bool isNonLoopEnded() const { return nonLopingAnimEnded;}
+	void ChangeState(AnimState State);
 	void stopAnimation();
 	void update(float dt);
 	void setFrame();
+
+	AnimState getState() const {return animState;}
 	
 	// Rendering
 	void render(sf::RenderTarget& target);
-	void setPosition(float x, float y);
-	void setScale(float x, float y);
-	void setOrigin(float x, float y);
+	void setPosition(const float x,const float y){sprite.setPosition(x,y);};
+	void setScale(const float x,const float y){sprite.setScale(x,y);}
+	void setOrigin(const float x,const float y){sprite.setOrigin(x,y);}
 	void setFlipX(bool flipped);
 	sf::FloatRect getBounds() const;
 	bool hasAnimations() const { return !animations.empty(); }
 	
 private:
+	AnimState animState;
 	std::map<std::string, Animation> animations;
 	std::map<std::string, sf::Texture> textures;
 	std::string currentAnimation = "idle";
@@ -43,6 +56,7 @@ private:
 	int currentFrameIndex;
 	bool isPlaying;
 	bool loop;
+	bool nonLopingAnimEnded{true}; // For non-looping animations, track if they've reached the end
 	bool flipX = false;
 	sf::Sprite sprite;
 };
