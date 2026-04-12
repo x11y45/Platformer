@@ -12,16 +12,21 @@ Tile.3=assets/level1/maps/layers/sliced-tileset/under-ground.png,WALL,true,false
 Tile.4=assets/level1/maps/layers/sliced-tileset/window.png,COLLECTIBLE,false,false,false
 Tile.90=,EMPTY,false,false,true
 
-# Player animations: Player.<AnimationName>=<Path>,<FrameCount>
-Player.Idle=assets/level1/sprites/player/idle.png,4
-Player.Run=assets/level1/sprites/player/run.png,8
-Player.Jump=assets/level1/sprites/player/jump.png,3
-Player.Fall=assets/level1/sprites/player/fall.png,2
+# Player animations: Player.<AnimationName>=<Path>,<FrameCount>,<FrameDuration>
+Player.Idle=assets/level1/sprites/player/idle.png,4,0.14
+Player.Run=assets/level1/sprites/player/run.png,8,0.10
+Player.Jump=assets/level1/sprites/player/jump.png,3,0.12
+Player.Fall=assets/level1/sprites/player/fall.png,2,0.12
+Player.Attack=assets/level1/sprites/player/attack.png,8,0.06
+Player.JumpAttack=assets/level1/sprites/player/jump-attack.png,5,0.06
+Player.Death=assets/level1/sprites/player/death.png,8,0.08
+Player.Hurt=assets/level1/sprites/player/hurt.png,1,0.12
 
 # Enemy templates: EnemyTemplate.<Name>.Stats=<Damage>,<Speed>,<Health>,<CanMove>,<CanJump>,<CanAttack>,<JumpStrength>,<HitboxW>,<HitboxH>,<OffsetX>,<OffsetY>
-# EnemyTemplate.<Name>.Anim.<State>=<Path>,<FrameCount>
+# EnemyTemplate.<Name>.Anim.<State>=<Path>,<FrameCount>,<FrameDuration>
 EnemyTemplate.Skull.Stats=10,90,3,true,false,false,0,48,32,12,6
-EnemyTemplate.Skull.Anim.Run=assets/level1/sprites/enemies/Skull.png,4
+EnemyTemplate.Skull.Anim.Run=assets/level1/sprites/enemies/Skull.png,4,0.12
+EnemyTemplate.Skull.Anim.Death=assets/level1/sprites/enemies/Skull-death.png,21,0.05
 EnemySpawn.90=Skull
 
 # Map layers: MapLayer.<LayerName>=<Path>,<ParallaxFactor>
