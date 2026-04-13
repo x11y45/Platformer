@@ -13,7 +13,7 @@ namespace {
 	 * the @kEnemyPatrolRangeX is how far the enemy will go from his home position before turning around, this is the behavior when the player is out of range.
 	 */
 	constexpr float kEnemyGravity = 1500.f;
-	constexpr float kEnemyTerminalVelocity = 100.f;
+	constexpr float kEnemyTerminalVelocity = 200.f;
 	constexpr float kEnemyDetectionRangeX = 2000.f;
 	constexpr float kEnemyDetectionRangeY = 200.f;
 	constexpr float kEnemyPatrolRangeX = 120.f;

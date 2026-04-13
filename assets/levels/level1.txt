@@ -24,7 +24,7 @@ Player.Hurt=assets/level1/sprites/player/hurt.png,1,0.12
 
 # Enemy templates: EnemyTemplate.<Name>.Stats=<Damage>,<Speed>,<Health>,<CanMove>,<CanJump>,<CanAttack>,<JumpStrength>,<HitboxW>,<HitboxH>,<OffsetX>,<OffsetY>
 # EnemyTemplate.<Name>.Anim.<State>=<Path>,<FrameCount>,<FrameDuration>
-EnemyTemplate.Skull.Stats=10,90,3,true,false,false,0,48,32,12,6
+EnemyTemplate.Skull.Stats=10,80,3,true,false,false,0,48,32,12,6
 EnemyTemplate.Skull.Anim.Run=assets/level1/sprites/enemies/Skull.png,4,0.12
 EnemyTemplate.Skull.Anim.Death=assets/level1/sprites/enemies/Skull-death.png,21,0.05
 EnemySpawn.90=Skull

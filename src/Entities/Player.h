@@ -11,7 +11,6 @@
 #include <map>
 #include <string>
 
-class map; // Forward declaration
 
 class Player : public Entity {
 public:

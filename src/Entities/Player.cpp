@@ -9,6 +9,10 @@
 #include <cmath>
 
 namespace {
+	/**
+	 * the constants for player's rendering and hitbox calculations.
+	 * these are based on the original sprite dimensions and animator origin.
+	 **/
 	constexpr float kPlayerRenderScale = 2.f;
 	constexpr float kSpriteOriginY = 96.f; // Matches Animator origin (0, 96)
 	constexpr float kHitboxLocalOffsetX = 54.5f; // In unscaled sprite pixels
@@ -169,7 +173,6 @@ void Player::update(float dt) {
 		doubleJump = false;
 	}
 
-	applyPhysics(dt);
 	position += velocity * deltaTime;
 	updateBounds();
 }
@@ -179,7 +182,7 @@ void Player::updateMovementsStates(const CollisionResult& collisionResult) {
 	position.x = collisionResult.correctedPosition.x - hitboxOffset.x;
 	position.y = collisionResult.correctedPosition.y - hitboxOffset.y;
 
-	if (collisionResult.top) { // Floor contact
+	if (collisionResult.top) { // Collided with the top of a platform (standing on it)
 		isGrounded = true;
 		if (velocity.y > 0.f) {
 			velocity.y = 0.f;
@@ -188,7 +191,7 @@ void Player::updateMovementsStates(const CollisionResult& collisionResult) {
 		isGrounded = false;
 	}
 
-	if (collisionResult.bottom && velocity.y < 0.f) { // Ceiling contact
+	if (collisionResult.bottom && velocity.y < 0.f) { // Collided with the bottom of a platform (hitting head)
 		velocity.y = 0.f;
 	}
 	if (collisionResult.left || collisionResult.right) {
@@ -199,7 +202,7 @@ void Player::updateMovementsStates(const CollisionResult& collisionResult) {
 		Jump = false;
 		doubleJump = false;
 	}
-
+	applyPhysics(deltaTime);
 	updateBounds();
 	updateAnimation(deltaTime);
 }
