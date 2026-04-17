@@ -144,7 +144,7 @@ void Game::update(float dt) {
     switch (currentState) {
         case GameState::MAIN_MENU:
             // TODO: Update menu animations
-            mainMenu.update(dt);
+            mainMenu.update(dt, window.mapPixelToCoords(sf::Mouse::getPosition(window), uiView));
             break;
 
         case GameState::PLAYING:

@@ -40,7 +40,7 @@ struct ParallaxLayer {
 	sf::Sprite spriteA;
 	sf::Sprite spriteB;
 	float parallaxFactor;
-	std::string name;
+	int num;
 };
 
 class map {
@@ -48,13 +48,13 @@ public:
 	map();
 	
 	// Parallax layer management
-	bool addParallaxLayer(const std::string& filepath, float parallaxFactor, const std::string& name);
+	bool addParallaxLayer(const std::string& filepath, float parallaxFactor, const int& num);
 	void updateParallax(const sf::Vector2f& cameraPosition, const sf::Vector2f& cameraViewSize);
 	void renderParallax(sf::RenderTarget& target, bool renderBackground = true);
 
 	void init(
 		const std::map<int, TileDefinition>& tileDefinitions,
-		const std::map<std::string,std::pair<std::string, float>>& layerFiles
+		const std::map<int,std::pair<std::string, float>>& layerFiles
 	);
 	
 	// Tile system
@@ -78,6 +78,7 @@ public:
 	int getParallaxLayerCount() const;
 	void setLayerParallaxFactor(int index, float factor);
 	ParallaxLayer getParallaxLayer(int index) const;
+	std::vector<ParallaxLayer> getParallaxLayer () {return parallaxLayers;}
 	void clear();
 	int getTileSize() const;
 	sf::Vector2i getGridDimensions() const;

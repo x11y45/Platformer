@@ -37,10 +37,13 @@ public:
 	void handleInput(const sf::Event& event) override;
 
 	void updateBounds() {
+		const bool crouching = isCrouching && isGrounded;
+		const float crouchShift = crouching ? height / 3.f : 0.f;
+		const float crouchHeight = crouching ? (height * 2.f / 3.f) : height;
 		bounds.left = position.x + hitboxOffset.x;
-		bounds.top = position.y + hitboxOffset.y;
+		bounds.top = position.y + hitboxOffset.y + crouchShift;
 		bounds.width = width;
-		bounds.height = height;
+		bounds.height = crouchHeight;
 	}
 	void updateMovementsStates(const CollisionResult& collisionResult);
 	void takeDamage(int damage, HitboxDirection hitDirection);
@@ -108,7 +111,7 @@ private:
 	// Attack constants
 	constexpr static const float ATTACK_RANGE_MULTIPLIER = 2.0f;  ///< Hitbox size multiplier
 	constexpr static const int BASE_ATTACK_DAMAGE = 1;             ///< Base damage per hit
-	constexpr static const float HURT_PUSH_DISTANCE = 32.f;
+	constexpr static const float HURT_PUSH_DISTANCE = 40.f;
 	constexpr static const float HURT_PUSH_SPEED = 220.f;
 	
 	// Physics

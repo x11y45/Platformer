@@ -187,13 +187,13 @@ void Level::load() {
 					std::cerr << "Failed to parse enemy animation: " << err.what() << std::endl;
 				}
 			} else if (key.rfind("MapLayer.", 0) == 0) {
-				std::string layerName = key.substr(9); // Remove "MapLayer."
+				int layerNum = std::stoi(key.substr(9)); // Remove "MapLayer."
 				size_t layerDelimiter = value.find(',');
 				if (layerDelimiter != std::string::npos) {
 					std::string layerPath = value.substr(0, layerDelimiter);
 					float parallaxFactor = std::stof(value.substr(layerDelimiter + 1));
-					config.mapLayers[layerName] = {layerPath, parallaxFactor};
-					std::cout << "Adding map layer: " << layerName << " with path: " << layerPath
+					config.mapLayers[layerNum] = {layerPath, parallaxFactor};
+					std::cout << "Adding map layer: " << layerNum << " with path: " << layerPath
 					          << " and parallax factor: " << parallaxFactor << std::endl;
 				}
 			}
