@@ -9,6 +9,7 @@ Game::Game()
       , mainMenu(window.getSize())
       , pauseMenu(window.getSize())
       , levelMenu(window.getSize())
+      , gameOverScreen(window.getSize())
       , playerLives(3)
       , maxLives(3) {
     window.setFramerateLimit(60);
@@ -87,7 +88,11 @@ void Game::processEvents() {
                 }
                 break;
             case GameState::PLAYING:
-                // Pass all events to level (which passes to player)
+                if (event.type == sf::Event::MouseButtonPressed &&
+                    hud.handleInput(worldMousePos) == HUDAction::Pause) {
+                    currentState = GameState::PAUSED;
+                    break;
+                }
                 levelManager.handleInput(event);
                 if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) {
                     changeState(GameState::PAUSED);
@@ -105,7 +110,7 @@ void Game::processEvents() {
                             changeState(GameState::PLAYING);
                             break;
                         case PauseMenuAction::MainMenu:
-                            currentState = GameState::MAIN_MENU;
+                            changeState(GameState::MAIN_MENU);
                             break;
                         case PauseMenuAction::None:
                             break;
@@ -132,7 +137,18 @@ void Game::processEvents() {
                 break;
             case GameState::GAME_OVER:
                 if (event.type == sf::Event::MouseButtonPressed) {
-                    handleGameOverInput();
+                    switch (gameOverScreen.handleInput(worldMousePos)) {
+                        case GameOverScreenAction::Retry:
+                            levelManager.restartCurrentLevel();
+                            configureCameraForCurrentLevel();
+                            changeState(GameState::PLAYING);
+                            break;
+                        case GameOverScreenAction::MainMenu:
+                            currentState = GameState::MAIN_MENU;
+                            break;
+                        case GameOverScreenAction::None:
+                            break;
+                    }
                 }
                 break;
             default:
@@ -143,32 +159,29 @@ void Game::processEvents() {
 void Game::update(float dt) {
     switch (currentState) {
         case GameState::MAIN_MENU:
-            // TODO: Update menu animations
-            mainMenu.update(dt);
+            mainMenu.update(dt, window.mapPixelToCoords(sf::Mouse::getPosition(window), uiView));
             break;
 
         case GameState::PLAYING:
-            // Update level and player
             levelManager.update(dt);
             if (const Level* level = getCurrentLevel(); level && level->getState() == LevelState::FAILED) {
                 changeState(GameState::GAME_OVER);
             }
-            hud.update(dt);
+            hud.update(dt, window.mapPixelToCoords(sf::Mouse::getPosition(window), uiView));
             camera.update(dt);
             worldView = camera.getView();
             break;
             
         case GameState::PAUSED:
-            // No updates while paused
-            pauseMenu.update(dt);
+            pauseMenu.update(dt, window.mapPixelToCoords(sf::Mouse::getPosition(window), uiView));
             break;
             
         case GameState::LEVEL_MENU:
-            levelMenu.update(dt);
+            levelMenu.update(dt, window.mapPixelToCoords(sf::Mouse::getPosition(window), uiView));
             break;
             
         case GameState::GAME_OVER:
-            // TODO: Update game over screen animations
+            gameOverScreen.update(dt, window.mapPixelToCoords(sf::Mouse::getPosition(window), uiView));
             break;
     }
 }
@@ -209,7 +222,7 @@ void Game::render() {
             
         case GameState::GAME_OVER:
             window.setView(uiView);
-            // TODO: Render game over screen
+            gameOverScreen.render(window);
             break;
     }
     window.display();
@@ -225,7 +238,6 @@ void Game::handlePausedInput() {
 }
 
 void Game::handleGameOverInput() {
-    // TODO: Handle retry/quit options
 }
 
 void Game::changeState(GameState newState) {

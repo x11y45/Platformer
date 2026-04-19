@@ -23,7 +23,7 @@ namespace {
 
 Player::Player():
 	health(MAX_HEALTH),
-	karma(MAX_KARMA),
+	karma(0),
 	speed(200.f),
 	jumpStrength(450.f),
 	position(300.f, 300.f),
@@ -36,6 +36,7 @@ Player::Player():
 	Jump(false),
 	doubleJump(false),
 	isFalling(false),
+	isCrouching(false),
 	deltaTime(0.f),
 	attackPhase(AttackPhase::None),
 	lifeState(LifeState::Alive),
@@ -172,15 +173,21 @@ void Player::update(float dt) {
 		Jump = false;
 		doubleJump = false;
 	}
+	if (isCrouching) {
+		velocity.x = 0.f; // Can't move while crouching
+
+	}
 
 	position += velocity * deltaTime;
 	updateBounds();
 }
 
 void Player::updateMovementsStates(const CollisionResult& collisionResult) {
+	const bool crouching = isCrouching && isGrounded;
+	const float crouchShift = crouching ? height / 3.f : 0.f;
 
 	position.x = collisionResult.correctedPosition.x - hitboxOffset.x;
-	position.y = collisionResult.correctedPosition.y - hitboxOffset.y;
+	position.y = collisionResult.correctedPosition.y - hitboxOffset.y - crouchShift;
 
 	if (collisionResult.top) { // Collided with the top of a platform (standing on it)
 		isGrounded = true;
@@ -232,22 +239,37 @@ void Player::updateAnimation(float dt) {
 		return;
 	}
 
-	// Choose animation based on state
-	if (!isGrounded) {
-		if (attackPhase == AttackPhase::Active) {
-			animator.playAnimation("JumpAttack", false);
-		} else if (velocity.y < 0) {
-			animator.playAnimation("Jump");
-		} else {
-			animator.playAnimation("Fall");
+	const auto chooseAnimation = [&]() -> std::pair<const char*, bool> {
+		if (isCrouching && isGrounded) {
+			if (attackPhase == AttackPhase::Active) {
+				return {"CrouchAttack", false};
+			}
+			return {"Crouch", true};
 		}
-	} else if (isMoving && std::abs(velocity.x) > 0.1f) {
-		animator.playAnimation("Run");
-	} else if (attackPhase == AttackPhase::Active) {
-		animator.playAnimation("Attack", false);
-	}else {
-		animator.playAnimation("Idle");
-	}
+
+		if (attackPhase == AttackPhase::Active) {
+			if (!isGrounded) {
+				return {"JumpAttack", false};
+			}
+			return {"Attack", false};
+		}
+
+		if (!isGrounded) {
+			if (velocity.y < 0) {
+				return {"Jump", true};
+			}
+			return {"Fall", true};
+		}
+
+		if (isMoving && std::abs(velocity.x) > 0.1f) {
+			return {"Run", true};
+		}
+
+		return {"Idle", true};
+	};
+
+	const auto [animationName, loop] = chooseAnimation();
+	animator.playAnimation(animationName, loop);
 
 	animator.update(dt);
 	if (attackPhase == AttackPhase::Active && animator.isNonLoopEnded()) {

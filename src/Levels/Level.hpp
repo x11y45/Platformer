@@ -36,7 +36,7 @@ struct LevelConfig {
 	std::map<std::string, AnimationSpec> Player;
 	std::string playerName;
 	std::map<std::string, AnimationSpec> Enemies;
-	std::map<std::string,std::pair<std::string, float>> mapLayers; // Layer path + parallax factor
+	std::map<int,std::pair<std::string, float>> mapLayers; // Layer path + parallax factor
 	float timeLimit;              // Seconds
 	int targetScore;            // the minimum score you need to pass the level
 };

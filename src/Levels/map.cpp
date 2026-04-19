@@ -9,12 +9,13 @@
 #include <algorithm>
 #include <cmath>
 
-map::map() : tileSize(16), gridWidth(0), gridHeight(0), lastCameraPos(0.f, 0.f) {
+map::map() : lastCameraPos(0.f, 0.f), tileSize(16), gridWidth(0), gridHeight(0) {
+
 }
 
 void map::init(
 	const std::map<int, TileDefinition>& tileDefinitions,
-	const std::map<std::string,std::pair<std::string, float>>& layerFiles
+	const std::map<int,std::pair<std::string, float>>& layerFiles
 ) {
 	for (const auto& tileEntry : tileDefinitions) {
 		registerTileType(
@@ -28,29 +29,29 @@ void map::init(
 	}
 
 	for (const auto& layerEntry : layerFiles) {
-		const std::string& name = layerEntry.first;
+		const int& num = layerEntry.first;
 		const std::string& filepath = layerEntry.second.first;
 		const float parallaxFactor = layerEntry.second.second;
-		if (addParallaxLayer(filepath, parallaxFactor, name)) {
-			std::cout << "Loaded parallax layer: " << name << " with factor " << parallaxFactor << std::endl;
+		if (addParallaxLayer(filepath, parallaxFactor, num)) {
+			std::cout << "Loaded parallax layer: " << num << " with factor " << parallaxFactor << std::endl;
 		} else {
-			std::cerr << "Failed to load parallax layer: " << name << std::endl;
+			std::cerr << "Failed to load parallax layer: " << num << std::endl;
 		}
 	}
 }
 
-bool map::addParallaxLayer(const std::string& filepath, float parallaxFactor, const std::string& name) {
+bool map::addParallaxLayer(const std::string& filepath, float parallaxFactor, const int& num) {
 
 	ParallaxLayer layer;
 	layer.parallaxFactor = parallaxFactor;
-	layer.name = name;
+	layer.num = num;
 	
 	if (!layer.texture.loadFromFile(filepath)) {
 		std::cerr << "Failed to load parallax layer: " << filepath << std::endl;
 		return false;
 	}
 	
-	parallaxLayers.push_back(std::move(layer));
+	parallaxLayers.push_back(layer);
 	refreshParallaxTextureBindings();
 	
 	return true;
@@ -60,6 +61,8 @@ void map::refreshParallaxTextureBindings() {
 	for (auto& layer : parallaxLayers) {
 		layer.spriteA.setTexture(layer.texture);
 		layer.spriteB.setTexture(layer.texture);
+		layer.spriteA.setPosition(0.f, 0.f);
+		layer.spriteB.setPosition(layer.spriteA.getGlobalBounds().width, 0.f);
 	}
 }
 
@@ -70,12 +73,11 @@ void map::updateParallax(const sf::Vector2f& cameraPosition, const sf::Vector2f&
 			continue;
 		}
 
-		const float textureWidth = static_cast<float>(textureSize.x);
-		const float textureHeight = static_cast<float>(textureSize.y);
-		const float targetWidth = cameraViewSize.x * 1.5f;
-		const float targetHeight = cameraViewSize.y * 1.5f;
+		const auto textureWidth = static_cast<float>(textureSize.x);
+		const auto textureHeight = static_cast<float>(textureSize.y);
+		const float targetWidth = cameraViewSize.x * 1.1f;
+		const float targetHeight = cameraViewSize.y * 1.1f;
 		const float scale = std::max(targetWidth / textureWidth, targetHeight / textureHeight);
-
 		layer.spriteA.setScale(scale, scale);
 		layer.spriteB.setScale(scale, scale);
 
@@ -127,14 +129,14 @@ void map::registerTileType(int id, const std::string& imagePath, TileType type, 
 		sf::Texture texture;
 		if (texture.loadFromFile(imagePath)) {
 			texture.setSmooth(false);
-			tileTextures[id] = std::move(texture);
+			tileTextures[id] = texture;
 		} else {
 			std::cerr << "Failed to load tile texture: " << imagePath << std::endl;
 		}
 	}
 }
 
-void map::configureTileSprite(Tile& tile, int tileId) {
+void map::configureTileSprite(Tile& tile, const int tileId) {
 	if (tileTextures.count(tileId) == 0) {
 		return;
 	}
@@ -277,8 +279,8 @@ void map::renderTiles(sf::RenderTarget& target, const sf::View& cameraView) {
 }
 
 Tile* map::getTileAt(float x, float y) {
-	int col = static_cast<int>(x / tileSize);
-	int row = static_cast<int>(y / tileSize);
+	const int col = static_cast<int>(x / tileSize);
+	const int row = static_cast<int>(y / tileSize);
 	
 	return getTileAtGrid(col, row);
 }
@@ -335,9 +337,9 @@ std::vector<Tile*> map::getCollidingTiles(const sf::FloatRect& bounds) {
 }
 
 sf::FloatRect map::getTileWorldBounds(const Tile& tile) const {
-	const float worldX = static_cast<float>(tile.gridX * tileSize);
-	const float worldY = static_cast<float>(tile.gridY * tileSize);
-	const float size = static_cast<float>(tileSize);
+	const auto worldX = static_cast<float>(tile.gridX * tileSize);
+	const auto worldY = static_cast<float>(tile.gridY * tileSize);
+	const auto size = static_cast<float>(tileSize);
 	return {worldX, worldY, size, size};
 }
 

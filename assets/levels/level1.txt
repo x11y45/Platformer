@@ -6,10 +6,10 @@ targetScore=1000
 
 # Tile registry: Tile.<Id>=<Path>,<TileType>,<Solid>,<Harmful>,<SpawnMarker>
 Tile.0=,EMPTY,false,false,false
-Tile.1=assets/level1/maps/layers/sliced-tileset/ground.png,PLATFORM,true,false,false
-Tile.2=assets/level1/maps/layers/sliced-tileset/slope.png,SPIKE,false,true,false
-Tile.3=assets/level1/maps/layers/sliced-tileset/under-ground.png,WALL,true,false,false
-Tile.4=assets/level1/maps/layers/sliced-tileset/window.png,COLLECTIBLE,false,false,false
+Tile.1=assets/level1/maps/sliced-tileset/ground.png,PLATFORM,true,false,false
+Tile.2=assets/level1/maps/sliced-tileset/slope.png,SPIKE,false,true,false
+Tile.3=assets/level1/maps/sliced-tileset/under-ground.png,WALL,true,false,false
+Tile.4=assets/level1/maps/sliced-tileset/window.png,COLLECTIBLE,false,false,false
 Tile.90=,EMPTY,false,false,true
 
 # Player animations: Player.<AnimationName>=<Path>,<FrameCount>,<FrameDuration>
@@ -21,6 +21,8 @@ Player.Attack=assets/level1/sprites/player/attack.png,8,0.06
 Player.JumpAttack=assets/level1/sprites/player/jump-attack.png,5,0.06
 Player.Death=assets/level1/sprites/player/death.png,8,0.08
 Player.Hurt=assets/level1/sprites/player/hurt.png,1,0.12
+Player.Crouch=assets/level1/sprites/player/crouch.png,2,0.12
+Player.CrouchAttack=assets/level1/sprites/player/crouch-attack.png,5,0.06
 
 # Enemy templates: EnemyTemplate.<Name>.Stats=<Damage>,<Speed>,<Health>,<CanMove>,<CanJump>,<CanAttack>,<JumpStrength>,<HitboxW>,<HitboxH>,<OffsetX>,<OffsetY>
 # EnemyTemplate.<Name>.Anim.<State>=<Path>,<FrameCount>,<FrameDuration>
@@ -30,5 +32,9 @@ EnemyTemplate.Skull.Anim.Death=assets/level1/sprites/enemies/Skull-death.png,21,
 EnemySpawn.90=Skull
 
 # Map layers: MapLayer.<LayerName>=<Path>,<ParallaxFactor>
-MapLayer.Background=assets/level1/maps/layers/background.png,0
-MapLayer.Midground=assets/level1/maps/layers/middleground.png,0.5
+MapLayer.0=assets/level1/maps/Layers/sky.png,0
+MapLayer.1=assets/level1/maps/Layers/far-mountains.png,0.3
+MapLayer.2=assets/level1/maps/Layers/middle-mountains.png,0.5
+MapLayer.3=assets/level1/maps/Layers/far-trees.png,0.8
+MapLayer.4=assets/level1/maps/Layers/myst.png,1.0
+MapLayer.5=assets/level1/maps/Layers/near-trees.png,1.2
