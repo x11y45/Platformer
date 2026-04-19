@@ -1,20 +1,22 @@
-//
-// Created by x11y45 on 4/2/26.
-//
-
 #ifndef PLATFORMER_HUD_H
 #define PLATFORMER_HUD_H
 
 #include <SFML/Graphics.hpp>
 #include <vector>
-#include <iostream>
+#include "MenuButton.h"
+
+enum class HUDAction {
+	None,
+	Pause
+};
 
 class HUD {
 public:
 	HUD();
 
-	void update(float dt);
+	void update(float dt, const sf::Vector2f& worldMousePos);
 	void render(sf::RenderTarget& target, unsigned int health, unsigned int maxHealth);
+	HUDAction handleInput(const sf::Vector2f& worldMousePos) const;
 
 private:
 	void updateHealthBar(unsigned int health, unsigned int maxHealth);
@@ -27,6 +29,10 @@ private:
 	sf::Sprite healthBarSprite;
 	sf::Sprite karmaBarSprite;
 	sf::RectangleShape barFill;
+	MenuButton pauseButton;
+	sf::Texture pauseButtonTexture;
+	sf::Texture buttonHolderTexture;
+	sf::Texture buttonHoverTexture;
 
 	float frameTimer{0.f};
 	std::size_t frameIndex{0};
@@ -34,4 +40,4 @@ private:
 	unsigned int lastMaxHealth{200};
 };
 
-#endif //PLATFORMER_HUD_H
+#endif // PLATFORMER_HUD_H

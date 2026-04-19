@@ -42,6 +42,8 @@ void MainMenu::init(map &map) {
 	const float scaleY = screenY / static_cast<float>(parallaxLayers[0].spriteA.getTexture()->getSize().y);
 
 	for (auto& layer: parallaxLayers) {
+		layer.spriteA.setTexture(layer.texture);
+		layer.spriteB.setTexture(layer.texture);
 		layer.spriteA.setScale(scaleX,scaleY);
 		layer.spriteB.setScale(scaleX,scaleY);
 		layer.spriteA.setPosition(0.f,0.f);
@@ -62,7 +64,7 @@ void MainMenu::init(map &map) {
 	                              float holderPaddingX,
 	                              float holderPaddingY,
 	                              bool interactive) {
-		button.action = action;
+		button.actionId = static_cast<int>(action);
 		button.interactive = interactive;
 		button.basePosition = position;
 		button.baseLabelScale = labelScale;
@@ -88,9 +90,9 @@ void MainMenu::init(map &map) {
 	configureButton(menuButtons[0], menuButtonTexture, MainMenuAction::None,
 		{screenX / 2.f, screenY * 0.18f}, 2.15f, 28.f, 14.f, false);
 	configureButton(menuButtons[1], playButtonTexture, MainMenuAction::StartGame,
-		{screenX / 2.f, screenY * 0.50f}, 2.00f, 32.f, 16.f, true);
+		{screenX / 2.f, screenY * 0.50f}, 2.20f, 40.f, 20.f, true);
 	configureButton(menuButtons[2], levelButtonTexture, MainMenuAction::OpenLevelMenu,
-		{screenX / 2.f, screenY * 0.61f}, 1.95f, 32.f, 16.f, true);
+		{screenX / 2.f, screenY * 0.61f}, 2.15f, 40.f, 20.f, true);
 
 
 
@@ -198,7 +200,7 @@ MainMenuAction MainMenu::handleInput(const sf::Vector2f& worldMousePos) const {
 	}
 	for (const auto& button : menuButtons) {
 		if (button.interactive && button.label.getGlobalBounds().contains(worldMousePos)) {
-			return button.action;
+			return static_cast<MainMenuAction>(button.actionId);
 		}
 	}
 	return MainMenuAction::None;

@@ -3,54 +3,78 @@
 //
 
 #include "PauseMenu.h"
+#include "MenuButtonStyle.h"
+
+namespace {
+	constexpr const char* kFramePath = "assets/DarkRedUISheet_crops/ui_panel_square_outline_a.png";
+	constexpr const char* kButtonHolderPath = "assets/DarkRedUISheet_crops/ui_pill_button_outline_large.png";
+	constexpr const char* kButtonHoverPath = "assets/DarkRedUISheet_crops/ui_pill_button_fill_large.png";
+	constexpr const char* kResumePath = "assets/Headings/0.png";
+	constexpr const char* kRestartPath = "assets/Headings/1.png";
+	constexpr const char* kQuitPath = "assets/Headings/2.png";
+}
 
 PauseMenu::PauseMenu(sf::Vector2u screenSize)
 	: screenX(static_cast<float>(screenSize.x))
 	, screenY(static_cast<float>(screenSize.y)) {
 	overlay.setSize({screenX, screenY});
-	overlay.setFillColor(sf::Color(0, 0, 0, 140));
+	overlay.setFillColor(sf::Color(0, 0, 0, 145));
 
-	resumeTexture.loadFromFile("assets/play_button.png");
-	restartTexture.loadFromFile("assets/pause_button.png");
-	menuTexture.loadFromFile("assets/menu_button.png");
+	frameTexture.loadFromFile(kFramePath);
+	buttonHolderTexture.loadFromFile(kButtonHolderPath);
+	buttonHoverTexture.loadFromFile(kButtonHoverPath);
+	resumeTexture.loadFromFile(kResumePath);
+	restartTexture.loadFromFile(kRestartPath);
+	menuTexture.loadFromFile(kQuitPath);
 
-	resumeButton.setTexture(resumeTexture);
-	resumeButton.setOrigin(resumeButton.getGlobalBounds().width / 2.f,
-	                       resumeButton.getGlobalBounds().height / 2.f);
-	resumeButton.setScale(2.5f, 2.5f);
-	resumeButton.setPosition(screenX / 2.f, screenY * 0.35f);
+	MenuButtonStyle::centerSprite(frameSprite, frameTexture);
+	frameSprite.setScale(7.2f, 4.5f);
+	frameSprite.setPosition(screenX / 2.f, screenY * 0.53f);
 
-	restartButton.setTexture(restartTexture);
-	restartButton.setOrigin(restartButton.getGlobalBounds().width / 2.f,
-	                        restartButton.getGlobalBounds().height / 2.f);
-	restartButton.setScale(2.5f, 2.5f);
-	restartButton.setPosition(screenX / 2.f, screenY * 0.5f);
-
-	menuButton.setTexture(menuTexture);
-	menuButton.setOrigin(menuButton.getGlobalBounds().width / 2.f,
-	                    menuButton.getGlobalBounds().height / 2.f);
-	menuButton.setScale(2.5f, 2.5f);
-	menuButton.setPosition(screenX / 2.f, screenY * 0.65f);
+	MenuButtonStyle::configure(buttons[0], resumeTexture, buttonHolderTexture, buttonHoverTexture,
+	                           static_cast<int>(PauseMenuAction::Resume),
+	                           {screenX / 2.f, screenY * 0.42f}, 2.05f, 38.f, 18.f, true);
+	MenuButtonStyle::configure(buttons[1], restartTexture, buttonHolderTexture, buttonHoverTexture,
+	                           static_cast<int>(PauseMenuAction::Restart),
+	                           {screenX / 2.f, screenY * 0.54f}, 2.00f, 38.f, 18.f, true);
+	MenuButtonStyle::configure(buttons[2], menuTexture, buttonHolderTexture, buttonHoverTexture,
+	                           static_cast<int>(PauseMenuAction::MainMenu),
+	                           {screenX / 2.f, screenY * 0.66f}, 1.95f, 38.f, 18.f, true);
 }
 
-void PauseMenu::update(float) {}
+void PauseMenu::update(float, const sf::Vector2f& worldMousePos) {
+	for (auto& button : buttons) {
+		MenuButtonStyle::update(button, worldMousePos);
+	}
+}
 
 void PauseMenu::render(sf::RenderWindow& window) const {
 	window.draw(overlay);
-	window.draw(resumeButton);
-	window.draw(restartButton);
-	window.draw(menuButton);
+	window.draw(frameSprite);
+	for (const auto& button : buttons) {
+		window.draw(button.holder);
+		if (button.hovered) {
+			window.draw(button.hoverFill);
+		}
+		window.draw(button.label);
+	}
 }
 
 PauseMenuAction PauseMenu::handleInput(const sf::Vector2f& worldMousePos) const {
-	if (resumeButton.getGlobalBounds().contains(worldMousePos)) {
-		return PauseMenuAction::Resume;
-	}
-	if (restartButton.getGlobalBounds().contains(worldMousePos)) {
-		return PauseMenuAction::Restart;
-	}
-	if (menuButton.getGlobalBounds().contains(worldMousePos)) {
-		return PauseMenuAction::MainMenu;
+	for (const auto& button : buttons) {
+		if (!button.label.getGlobalBounds().contains(worldMousePos)) {
+			continue;
+		}
+		switch (button.actionId) {
+			case static_cast<int>(PauseMenuAction::Resume):
+				return PauseMenuAction::Resume;
+			case static_cast<int>(PauseMenuAction::Restart):
+				return PauseMenuAction::Restart;
+			case static_cast<int>(PauseMenuAction::MainMenu):
+				return PauseMenuAction::MainMenu;
+			default:
+				break;
+		}
 	}
 	return PauseMenuAction::None;
 }

@@ -5,6 +5,7 @@
 #define PLATFORMER_MAINMENU_H
 #include "SFML/Graphics.hpp"
 #include "Levels/map.h"
+#include "MenuButton.h"
 #include <array>
 #include <vector>
 
@@ -17,19 +18,6 @@ enum class MainMenuAction {
 
 class MainMenu {
 private:
-	struct MenuButton {
-		MainMenuAction action{MainMenuAction::None};
-		sf::Sprite holder;
-		sf::Sprite hoverFill;
-		sf::Sprite label;
-		sf::Vector2f basePosition;
-		float baseLabelScale{1.f};
-		float baseHolderScaleX{1.f};
-		float baseHolderScaleY{1.f};
-		bool interactive{false};
-		bool hovered{false};
-	};
-
 	const float screenX;
 	const float screenY;
 	bool loadingFinished{false};

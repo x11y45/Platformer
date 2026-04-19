@@ -88,6 +88,7 @@ void Animator::stopAnimation() {
 	ChangeState(AnimState::None);
 	isPlaying = false;
 }
+
 void Animator::update(float dt) {
 	if (isPlaying && animations.find(currentAnimation) != animations.end()) {
 		elapsedTime += dt;

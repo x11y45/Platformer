@@ -1,15 +1,12 @@
-//
-// Created by x11y45 on 4/2/26.
-//
-
 #include "HUD.h"
+#include "MenuButtonStyle.h"
 #include <algorithm>
 #include <cmath>
 
 namespace {
 	constexpr const char* kHUDSheetPath = "assets/UI/HeartSpriteSheet.png";
 	std::string kHUDBarFramePath (const int num, const std::string& bar) {
-	return "assets/UI/"+ bar +"/" + std::to_string(num*10) + ".png";
+		return "assets/UI/"+ bar +"/" + std::to_string(num*10) + ".png";
 	}
 	const sf::IntRect kHUDFrames[] = {
 		{0, 0, 90,28},
@@ -28,6 +25,9 @@ namespace {
 	constexpr float kBarHeight = 22.f;
 	constexpr float kBarInsetX = 3.f;
 	constexpr float kBarInsetY = 5.f;
+	constexpr const char* kPauseButtonPath = "assets/pause_button.png";
+	constexpr const char* kButtonHolderPath = "assets/DarkRedUISheet_crops/ui_pill_button_outline_large.png";
+	constexpr const char* kButtonHoverPath = "assets/DarkRedUISheet_crops/ui_pill_button_fill_large.png";
 }
 
 HUD::HUD() {
@@ -37,7 +37,6 @@ HUD::HUD() {
 	frameSprite.setPosition(kHUDPosX, kHUDPosY);
 	frameSprite.setScale(320.f/180,320.f/180);
 
-	// Load bar frame textures
 	healthBarSprite.setPosition(
 		kHUDPosX + kHealthBarPosX,
 		kHUDPosY + kHealthBarPosY
@@ -47,25 +46,19 @@ HUD::HUD() {
 		kHUDPosY + kKarmaBarPosY
 	);
 
-
 	healthBarTextures.resize(11);
-	karmaBarTextures.resize(11); // 0% to 100% in 10% increments
+	karmaBarTextures.resize(11);
 
 	for (int i = 0; i <= 10; ++i) {
 		sf::Texture healthFrameTexture;
 		sf::Texture karmaFrameTexture;
-		try {
-			karmaFrameTexture.loadFromFile(kHUDBarFramePath(i , karma ));
-			healthFrameTexture.loadFromFile(kHUDBarFramePath(i , health ));
-		}		catch (const std::exception& err) {
-			std::cerr << "Failed to load HUD bar frame texture for " << i*10
-			          << "%: " << err.what() << std::endl;
-		}
+		karmaFrameTexture.loadFromFile(kHUDBarFramePath(i , karma ));
+		healthFrameTexture.loadFromFile(kHUDBarFramePath(i , health ));
 		healthBarTextures[i] = healthFrameTexture;
 		karmaBarTextures[i] = karmaFrameTexture;
 	}
-	healthBarSprite.setTexture(healthBarTextures[10]); // Start with full bar frame.
-	karmaBarSprite.setTexture(karmaBarTextures[10]); // Start with full bar frame.
+	healthBarSprite.setTexture(healthBarTextures[10]);
+	karmaBarSprite.setTexture(karmaBarTextures[10]);
 
 	barFill.setFillColor(sf::Color(214, 69, 84));
 	barFill.setPosition(
@@ -73,9 +66,17 @@ HUD::HUD() {
 		kHUDPosY + kHealthBarPosY + kBarInsetY
 	);
 	barFill.setSize({kBarWidth - kBarInsetX * 2.f, kBarHeight - kBarInsetY * 2.f});
+
+	pauseButtonTexture.loadFromFile(kPauseButtonPath);
+	buttonHolderTexture.loadFromFile(kButtonHolderPath);
+	buttonHoverTexture.loadFromFile(kButtonHoverPath);
+	MenuButtonStyle::configure(pauseButton, pauseButtonTexture, buttonHolderTexture, buttonHoverTexture,
+	                           static_cast<int>(HUDAction::Pause),
+	                           {760.f, 44.f}, 1.4f, 24.f, 12.f, true);
 }
 
-void HUD::update(float dt) {
+void HUD::update(float dt, const sf::Vector2f& worldMousePos) {
+	MenuButtonStyle::update(pauseButton, worldMousePos);
 	updateFrameAnimation(dt);
 }
 
@@ -85,6 +86,18 @@ void HUD::render(sf::RenderTarget& target, unsigned int health, unsigned int max
 	target.draw(frameSprite);
 	target.draw(healthBarSprite);
 	target.draw(karmaBarSprite);
+	target.draw(pauseButton.holder);
+	if (pauseButton.hovered) {
+		target.draw(pauseButton.hoverFill);
+	}
+	target.draw(pauseButton.label);
+}
+
+HUDAction HUD::handleInput(const sf::Vector2f& worldMousePos) const {
+	if (pauseButton.label.getGlobalBounds().contains(worldMousePos)) {
+		return HUDAction::Pause;
+	}
+	return HUDAction::None;
 }
 
 void HUD::updateHealthBar(unsigned int health, unsigned int maxHealth) {

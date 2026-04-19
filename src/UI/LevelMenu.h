@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <SFML/Graphics.hpp>
+#include "MenuButton.h"
 
 class LevelManager;
 
@@ -25,18 +26,22 @@ class LevelMenu {
 public:
 	LevelMenu(sf::Vector2u screenSize);
 	void init(const LevelManager& levelManager);
-	void update(float dt);
+	void update(float dt, const sf::Vector2f& worldMousePos);
 	void render(sf::RenderWindow& window) const;
 	LevelMenuAction handleInput(const sf::Vector2f& worldMousePos) const;
 
 private:
 	float screenX;
 	float screenY;
+	sf::RectangleShape overlay;
+	sf::Texture frameTexture;
+	sf::Texture buttonHolderTexture;
+	sf::Texture buttonHoverTexture;
 	sf::Texture levelButtonTexture;
 	sf::Texture backButtonTexture;
-	sf::Sprite backButtonSprite;
+	sf::Sprite frameSprite;
 	std::vector<int> levelIds;
-	std::vector<sf::Sprite> levelButtons;
+	std::vector<MenuButton> buttons;
 };
 
 #endif // PLATFORMER_LEVELMENU_H
