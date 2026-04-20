@@ -11,8 +11,8 @@ namespace {
 	constexpr const char* kFramePath = "assets/DarkRedUISheet_crops/ui_panel_square_outline_a.png";
 	constexpr const char* kButtonHolderPath = "assets/DarkRedUISheet_crops/ui_pill_button_outline_large.png";
 	constexpr const char* kButtonHoverPath = "assets/DarkRedUISheet_crops/ui_pill_button_fill_large.png";
-	constexpr const char* kLevelButtonPath = "assets/Headings/2.png";
-	constexpr const char* kBackButtonPath = "assets/Headings/0.png";
+	constexpr const char* kLevelButtonPath = "assets/Headings/play.png";
+	constexpr const char* kBackButtonPath = "assets/Headings/menu.png";
 }
 
 LevelMenu::LevelMenu(sf::Vector2u screenSize)

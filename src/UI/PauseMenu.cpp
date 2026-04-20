@@ -9,9 +9,9 @@ namespace {
 	constexpr const char* kFramePath = "assets/DarkRedUISheet_crops/ui_panel_square_outline_a.png";
 	constexpr const char* kButtonHolderPath = "assets/DarkRedUISheet_crops/ui_pill_button_outline_large.png";
 	constexpr const char* kButtonHoverPath = "assets/DarkRedUISheet_crops/ui_pill_button_fill_large.png";
-	constexpr const char* kResumePath = "assets/Headings/0.png";
-	constexpr const char* kRestartPath = "assets/Headings/1.png";
-	constexpr const char* kQuitPath = "assets/Headings/2.png";
+	constexpr const char* kResumePath = "assets/Headings/resume.png";
+	constexpr const char* kRestartPath = "assets/Headings/restart.png";
+	constexpr const char* kQuitPath = "assets/Headings/quit.png";
 }
 
 PauseMenu::PauseMenu(sf::Vector2u screenSize)

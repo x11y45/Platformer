@@ -236,6 +236,15 @@ void Level::update(float dt) {
 	player.update(dt);
 	CollisionResult collisionResult = collisionSystem.resolveMapCollision(player.getBounds(), levelMap);
 	player.updateMovementsStates(collisionResult);
+
+	const sf::Vector2i grid = levelMap.getGridDimensions();
+	if (grid.y > 0 && levelMap.getTileSize() > 0) {
+		const float mapBottom = static_cast<float>(grid.y * levelMap.getTileSize());
+		if (player.getBounds().top > mapBottom) {
+			player.takeDamage(static_cast<int>(player.getHealth()), HitboxDirection::None);
+		}
+	}
+
 	enemyManager.resolvePlayerAttack(player.getAttackInfo());
 	player.finalizeAttackFrame();
 	enemyManager.update(dt, levelMap, player);

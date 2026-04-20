@@ -22,6 +22,7 @@ namespace {
 Enemy::Enemy()
 	: position(0.f, 0.f)
 	, velocity(0.f, 0.f)
+	, hitPushRemaining(0.f, 0.f)
 	, targetPlayerPosition(nullptr)
 	, levelMap(nullptr)
 	, bounds(0.f, 0.f, 32.f, 32.f)
@@ -46,6 +47,7 @@ void Enemy::configure(const EnemyTemplate& config, const sf::Vector2f& spawnPosi
 	homePosition = spawnPosition;
 	position = spawnPosition;
 	velocity = {0.f, 0.f};
+	hitPushRemaining = {0.f, 0.f};
 	grounded = false;
 	facingRight = true;
 	alive = true;
@@ -141,33 +143,44 @@ void Enemy::updatePatrolMovement() {
 }
 
 void Enemy::onHit(int damage, HitboxDirection hitDirection) {
+	(void)damage;
 	// Only process feedback if cooldown has elapsed
 	if (timeSinceLastHit > 0.f) {
 		return;
 	}
 
-	// Apply knockback based on hit direction
-	// Simple knockback implementation: push away from hit direction
-	const float knockbackStrength = 150.f;
+	// Apply knockback based on hit direction.
+	// Push a short distance away from the player, then let normal AI resume.
 	switch (hitDirection) {
 		case HitboxDirection::Right:
-			// Hit from left, push right
-			velocity.x = knockbackStrength;
+			hitPushRemaining.x = HIT_PUSH_DISTANCE;
 			break;
 		case HitboxDirection::Left:
-			// Hit from right, push left
-			velocity.x = -knockbackStrength;
+			hitPushRemaining.x = -HIT_PUSH_DISTANCE;
 			break;
 		case HitboxDirection::None:
-			// No directional knockback
+			hitPushRemaining.x = 0.f;
 			break;
 	}
-	
-	// Add slight upward knockback
-	velocity.y = std::max(velocity.y, -100.f);
-	
+
+	hitPushRemaining.y = -HIT_PUSH_DISTANCE * 0.2f;
+
 	// Start cooldown
 	timeSinceLastHit = HIT_FEEDBACK_COOLDOWN;
+}
+
+void Enemy::updateHitPush(float dt) {
+	if (hitPushRemaining.x != 0.f) {
+		const float stepX = std::min(std::abs(hitPushRemaining.x), HIT_PUSH_SPEED * dt);
+		position.x += hitPushRemaining.x > 0.f ? stepX : -stepX;
+		hitPushRemaining.x += hitPushRemaining.x > 0.f ? -stepX : stepX;
+	}
+
+	if (hitPushRemaining.y != 0.f) {
+		const float stepY = std::min(std::abs(hitPushRemaining.y), HIT_PUSH_SPEED * dt);
+		position.y += hitPushRemaining.y > 0.f ? stepY : -stepY;
+		hitPushRemaining.y += hitPushRemaining.y > 0.f ? -stepY : stepY;
+	}
 }
 
 void Enemy::updateBounds() {
@@ -233,6 +246,20 @@ void Enemy::update(float dt) {
 	// Update hit feedback cooldown
 	if (timeSinceLastHit > 0.f) {
 		timeSinceLastHit -= dt;
+	}
+
+	if (hitPushRemaining.x != 0.f || hitPushRemaining.y != 0.f) {
+		updateHitPush(dt);
+		updateBounds();
+		if (levelMap) {
+			Collision collisionSystem;
+			CollisionResult collisionResult = collisionSystem.resolveMapCollision(bounds, *levelMap);
+			position.x = collisionResult.correctedPosition.x - definition.hitboxOffset.x;
+			position.y = collisionResult.correctedPosition.y - definition.hitboxOffset.y;
+			updateBounds();
+		}
+		syncVisuals();
+		return;
 	}
 
 	const bool playerInRange = targetPlayerPosition &&

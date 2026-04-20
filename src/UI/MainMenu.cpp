@@ -8,9 +8,9 @@
 
 namespace {
 	constexpr float kLoadingFrameDuration = 0.06f;
-	constexpr const char* kHeadingMenuPath = "assets/Headings/0.png";
-	constexpr const char* kHeadingPlayPath = "assets/Headings/1.png";
-	constexpr const char* kHeadingLevelPath = "assets/Headings/2.png";
+	constexpr const char* kHeadingMenuPath = "assets/Headings/menu.png";
+	constexpr const char* kHeadingPlayPath = "assets/Headings/play.png";
+	constexpr const char* kHeadingLevelPath = "assets/Headings/levels.png";
 	constexpr const char* kMenuFramePath = "assets/DarkRedUISheet_crops/ui_panel_square_outline_a.png";
 	constexpr const char* kButtonHolderPath = "assets/DarkRedUISheet_crops/ui_pill_button_outline_large.png";
 	constexpr const char* kButtonHoverPath = "assets/DarkRedUISheet_crops/ui_pill_button_fill_large.png";

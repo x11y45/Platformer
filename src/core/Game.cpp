@@ -204,13 +204,19 @@ void Game::render() {
             // Render UI
             window.setView(uiView);
             if (const Level* level = getCurrentLevel()) {
-                hud.render(window, level->getPlayerHealth(), level->getPlayerMaxHealth());
+                hud.render(window,  level->player);
             }
             break;
             
         case GameState::PAUSED:
             // Render world (frozen)
             window.setView(worldView);
+            levelManager.render(window, worldView);
+            window.setView(uiView);
+            if (const Level* level = getCurrentLevel()) {
+                hud.render(window,  level->player);
+            }
+            // Render pause overlay
             window.setView(uiView);
             pauseMenu.render(window);
             break;
@@ -226,18 +232,6 @@ void Game::render() {
             break;
     }
     window.display();
-}
-
-// input handling implementations
-void Game::handlePlayingInput() {
-    // Moved to processEvents - keyboard input handled there
-}
-
-void Game::handlePausedInput() {
-    // Moved to processEvents - keyboard input handled there
-}
-
-void Game::handleGameOverInput() {
 }
 
 void Game::changeState(GameState newState) {

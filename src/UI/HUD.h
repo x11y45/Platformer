@@ -4,6 +4,7 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include "MenuButton.h"
+#include "Entities/Player.h"
 
 enum class HUDAction {
 	None,
@@ -15,11 +16,12 @@ public:
 	HUD();
 
 	void update(float dt, const sf::Vector2f& worldMousePos);
-	void render(sf::RenderTarget& target, unsigned int health, unsigned int maxHealth);
+	void render(sf::RenderTarget& target,const Player& player);
 	HUDAction handleInput(const sf::Vector2f& worldMousePos) const;
 
 private:
 	void updateHealthBar(unsigned int health, unsigned int maxHealth);
+	void updateKarmaBar(unsigned int karma, unsigned int maxKarma);
 	void updateFrameAnimation(float dt);
 
 	sf::Texture sheetTexture;
@@ -28,7 +30,6 @@ private:
 	sf::Sprite frameSprite;
 	sf::Sprite healthBarSprite;
 	sf::Sprite karmaBarSprite;
-	sf::RectangleShape barFill;
 	MenuButton pauseButton;
 	sf::Texture pauseButtonTexture;
 	sf::Texture buttonHolderTexture;

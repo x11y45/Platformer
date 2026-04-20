@@ -82,7 +82,7 @@ public:
 	sf::Vector2f getPlayerSpawnPoint();
 	sf::Vector2f getGoalPosition();
 	
-protected:
+public:
 
 	void setState(LevelState newState);
 	void addScore(int points);

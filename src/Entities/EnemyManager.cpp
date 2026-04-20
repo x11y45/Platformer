@@ -130,6 +130,12 @@ void EnemyManager::update(float dt, map& levelMap, Player& player) {
 		}
 	}
 
+	for (auto& enemy : enemies) {
+		if (enemy && !enemy->isAlive() && enemy->animFinished()) {
+			// increment the players karma for each enemy killed
+			player.setKarma(20);
+		}
+	}
 	enemies.erase(
 		std::remove_if(enemies.begin(), enemies.end(), [](const std::unique_ptr<Enemy>& enemy) {
 			return !enemy->isAlive() && enemy->animFinished();

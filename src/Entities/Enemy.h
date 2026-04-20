@@ -59,17 +59,23 @@ private:
 	void updateAnimation(float dt);
 	void updateDeathAnimation(float dt);
 	void updatePatrolMovement();
+	void updateHitPush(float dt);
 	void syncVisuals();
 	
 	// Hit feedback timing (prevents visual spam from multiple hits in same frame)
 	float timeSinceLastHit{0.f};
-	constexpr static const float HIT_FEEDBACK_COOLDOWN = 0.1f;
+	constexpr static float HIT_FEEDBACK_COOLDOWN = 1.f;
+
+	// Attack constant
+	constexpr static float	HIT_PUSH_DISTANCE = 50.f;
+	constexpr static float HIT_PUSH_SPEED = 200.f;
 
 	EnemyTemplate definition;
 	int enemyId;
 	sf::Vector2f homePosition;
 	sf::Vector2f position;
 	sf::Vector2f velocity;
+	sf::Vector2f hitPushRemaining;
 	int patrolDirection{1};
 	const sf::Vector2f* targetPlayerPosition;
 	map* levelMap;

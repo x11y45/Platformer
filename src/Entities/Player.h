@@ -47,6 +47,9 @@ public:
 	}
 	void updateMovementsStates(const CollisionResult& collisionResult);
 	void takeDamage(int damage, HitboxDirection hitDirection);
+	void startHealing();
+	void cancelHealing();
+	void completeHealing();
 	
 	/**
 	 * Gets current attack state for EnemyManager to resolve hits
@@ -68,13 +71,14 @@ public:
 	sf::FloatRect getBounds() const;
 	unsigned int getHealth() const { return health; }
 	unsigned int getMaxHealth() const { return MAX_HEALTH; }
+	unsigned int getMaxKarma() const { return MAX_KARMA; }
 	unsigned int getKarma() const { return karma; }
 	bool isDeathAnimationFinished() const { return lifeState == LifeState::Dead && (!animator.hasAnimation("Death") || animator.isNonLoopEnded()); }
 	bool isAlive() const override { return lifeState != LifeState::Dead; }
 
 	// Setters
-	void setHealth(unsigned int health) { this->health = health; }
-	void setKarma(unsigned int karma) { this->karma = karma; }
+	void setHealth(unsigned int health) { this->health = std::min(this->health + health,MAX_HEALTH); }
+	void setKarma(unsigned int karma) { this->karma = std::min(this->karma + karma, MAX_KARMA); }
 
 private:
 	void startAttack();
@@ -128,6 +132,8 @@ private:
 	AttackPhase attackPhase;
 	LifeState lifeState;
 	bool isCrouching;
+	bool isHealing;
+	bool healAnimationStarted;
 	bool attackFacingRight;
 	int attackSequence;
 	float deltaTime;

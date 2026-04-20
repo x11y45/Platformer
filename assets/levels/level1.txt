@@ -23,6 +23,7 @@ Player.Death=assets/level1/sprites/player/death.png,8,0.08
 Player.Hurt=assets/level1/sprites/player/hurt.png,1,0.12
 Player.Crouch=assets/level1/sprites/player/crouch.png,2,0.12
 Player.CrouchAttack=assets/level1/sprites/player/crouch-attack.png,5,0.06
+Player.healing=assets/level1/sprites/player/healing.png,9,0.06
 
 # Enemy templates: EnemyTemplate.<Name>.Stats=<Damage>,<Speed>,<Health>,<CanMove>,<CanJump>,<CanAttack>,<JumpStrength>,<HitboxW>,<HitboxH>,<OffsetX>,<OffsetY>
 # EnemyTemplate.<Name>.Anim.<State>=<Path>,<FrameCount>,<FrameDuration>

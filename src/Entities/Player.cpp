@@ -53,7 +53,11 @@ Player::Player():
 }
 
 void Player::handleInput(const sf::Event &event) {
-	if (lifeState != LifeState::Alive || animator.getState() == AnimState::NonLoop) {
+	if (lifeState != LifeState::Alive) {
+		return;
+	}
+
+	if (animator.getState() == AnimState::NonLoop && !isHealing) {
 		return;
 	}
 
@@ -62,12 +66,18 @@ void Player::handleInput(const sf::Event &event) {
 		switch (event.key.code) {
 			case sf::Keyboard::A:
 			case sf::Keyboard::Left:
+				if (isHealing) {
+					cancelHealing();
+				}
 				isMoving = true;
 				facingRight = false;
 				moveDirection.x = -1.f;
 				break;
 			case sf::Keyboard::D:
 			case sf::Keyboard::Right:
+				if (isHealing) {
+					cancelHealing();
+				}
 				isMoving = true;
 				facingRight = true;
 				moveDirection.x = 1.f;
@@ -75,6 +85,9 @@ void Player::handleInput(const sf::Event &event) {
 			case sf::Keyboard::Space:
 			case sf::Keyboard::W:
 			case sf::Keyboard::Up:
+				if (isHealing) {
+					cancelHealing();
+				}
 				if (isGrounded) {
 					Jump = true;
 					isGrounded = false;
@@ -85,11 +98,20 @@ void Player::handleInput(const sf::Event &event) {
 				break;
 			case sf::Keyboard::S:
 			case sf::Keyboard::Down:
+				if (isHealing) {
+					cancelHealing();
+				}
 				isCrouching = true;
 				break;
 			case sf::Keyboard::X:
 			case sf::Keyboard::K:
+				if (isHealing) {
+					cancelHealing();
+				}
 				startAttack();
+				break;
+			case sf::Keyboard::C:
+				startHealing();
 				break;
 			default:
 				break;
@@ -144,6 +166,10 @@ void Player::update(float dt) {
 		updateDamageReaction(dt);
 		updateBounds();
 		return;
+	}
+
+	if (isHealing && (isMoving || Jump || attackPhase != AttackPhase::None)) {
+		cancelHealing();
 	}
 
 	if (moveDirection.x != 0.f) {
@@ -224,6 +250,26 @@ void Player::applyPhysics(float dt) {
 void Player::updateAnimation(float dt) {
 	animator.setFlipX(!facingRight);
 
+	if (isHealing) {
+		if (!healAnimationStarted) {
+			if (!animator.hasAnimation("healing")) {
+				cancelHealing();
+				return;
+			}
+			animator.playAnimation("healing", false);
+			healAnimationStarted = true;
+		}
+
+		animator.update(dt);
+		if (animator.isNonLoopEnded()) {
+			completeHealing();
+			animator.setPosition(position.x, position.y);
+			return;
+		}
+		animator.setPosition(position.x, position.y);
+		return;
+	}
+
 	if (lifeState == LifeState::Hurt) {
 		animator.update(dt);
 		animator.setPosition(position.x, position.y);
@@ -286,6 +332,10 @@ void Player::unload() {
 void Player::takeDamage(int damage, HitboxDirection hitDirection) {
 	if (damage <= 0 || lifeState != LifeState::Alive) {
 		return;
+	}
+
+	if (isHealing) {
+		cancelHealing();
 	}
 
 	if (damage >= static_cast<int>(health)) {
@@ -352,6 +402,7 @@ void Player::beginHurt(HitboxDirection hitDirection) {
 }
 
 void Player::beginDeath() {
+	cancelHealing();
 	attackPhase = AttackPhase::None;
 	lifeState = LifeState::Dead;
 	isMoving = false;
@@ -406,4 +457,40 @@ void Player::finalizeAttackFrame() {
 	if (attackPhase == AttackPhase::PendingClear) {
 		attackPhase = AttackPhase::None;
 	}
+}
+
+void Player::startHealing() {
+	const unsigned int healCost = MAX_KARMA / 10u;
+	if (lifeState != LifeState::Alive || isHealing || health >= MAX_HEALTH || karma < healCost) {
+		return;
+	}
+	if (isMoving || Jump || attackPhase != AttackPhase::None) {
+		return;
+	}
+	if (!animator.hasAnimation("healing")) {
+		return;
+	}
+
+	isHealing = true;
+	healAnimationStarted = false;
+}
+
+void Player::cancelHealing() {
+	isHealing = false;
+	healAnimationStarted = false;
+}
+
+void Player::completeHealing() {
+	if (!isHealing) {
+		return;
+	}
+
+	const unsigned int healCost = MAX_KARMA / 10u;
+	const unsigned int healAmount = MAX_HEALTH / 5u;
+	if (karma >= healCost) {
+		karma -= healCost;
+		health = std::min(health + healAmount, MAX_HEALTH);
+	}
+
+	cancelHealing();
 }

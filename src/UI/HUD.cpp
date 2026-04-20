@@ -12,8 +12,8 @@ namespace {
 		{0, 0, 90,28},
 		{90, 0, 90, 28}
 	};
-	const std::string health = "health";
-	const std::string karma = "karma";
+	const std::string Health = "health";
+	const std::string Karma = "karma";
 	constexpr float kFrameDuration = 0.18f;
 	constexpr float kHUDPosX = 16.f;
 	constexpr float kHUDPosY = 16.f;
@@ -25,7 +25,7 @@ namespace {
 	constexpr float kBarHeight = 22.f;
 	constexpr float kBarInsetX = 3.f;
 	constexpr float kBarInsetY = 5.f;
-	constexpr const char* kPauseButtonPath = "assets/pause_button.png";
+	constexpr const char* kPauseButtonPath = "assets/Headings/paused.png";
 	constexpr const char* kButtonHolderPath = "assets/DarkRedUISheet_crops/ui_pill_button_outline_large.png";
 	constexpr const char* kButtonHoverPath = "assets/DarkRedUISheet_crops/ui_pill_button_fill_large.png";
 }
@@ -52,27 +52,21 @@ HUD::HUD() {
 	for (int i = 0; i <= 10; ++i) {
 		sf::Texture healthFrameTexture;
 		sf::Texture karmaFrameTexture;
-		karmaFrameTexture.loadFromFile(kHUDBarFramePath(i , karma ));
-		healthFrameTexture.loadFromFile(kHUDBarFramePath(i , health ));
+		karmaFrameTexture.loadFromFile(kHUDBarFramePath(i , Karma ));
+		healthFrameTexture.loadFromFile(kHUDBarFramePath(i , Health ));
 		healthBarTextures[i] = healthFrameTexture;
 		karmaBarTextures[i] = karmaFrameTexture;
 	}
 	healthBarSprite.setTexture(healthBarTextures[10]);
 	karmaBarSprite.setTexture(karmaBarTextures[10]);
 
-	barFill.setFillColor(sf::Color(214, 69, 84));
-	barFill.setPosition(
-		kHUDPosX + kHealthBarPosX + kBarInsetX,
-		kHUDPosY + kHealthBarPosY + kBarInsetY
-	);
-	barFill.setSize({kBarWidth - kBarInsetX * 2.f, kBarHeight - kBarInsetY * 2.f});
 
 	pauseButtonTexture.loadFromFile(kPauseButtonPath);
 	buttonHolderTexture.loadFromFile(kButtonHolderPath);
 	buttonHoverTexture.loadFromFile(kButtonHoverPath);
 	MenuButtonStyle::configure(pauseButton, pauseButtonTexture, buttonHolderTexture, buttonHoverTexture,
 	                           static_cast<int>(HUDAction::Pause),
-	                           {760.f, 44.f}, 1.4f, 24.f, 12.f, true);
+	                           {700.f, 40.f}, 1.4f, 24.f, 12.f, true);
 }
 
 void HUD::update(float dt, const sf::Vector2f& worldMousePos) {
@@ -80,9 +74,9 @@ void HUD::update(float dt, const sf::Vector2f& worldMousePos) {
 	updateFrameAnimation(dt);
 }
 
-void HUD::render(sf::RenderTarget& target, unsigned int health, unsigned int maxHealth) {
-	updateHealthBar(health, maxHealth);
-	target.draw(barFill);
+void HUD::render(sf::RenderTarget& target,const Player& player) {
+	updateHealthBar(player.getHealth(), player.getMaxHealth());
+	updateKarmaBar(player.getKarma(), player.getMaxKarma());
 	target.draw(frameSprite);
 	target.draw(healthBarSprite);
 	target.draw(karmaBarSprite);
@@ -102,19 +96,23 @@ HUDAction HUD::handleInput(const sf::Vector2f& worldMousePos) const {
 
 void HUD::updateHealthBar(unsigned int health, unsigned int maxHealth) {
 	lastHealth = health;
-	lastMaxHealth = maxHealth == 0 ? 1 : maxHealth;
+	lastMaxHealth = maxHealth;
 
 	const float healthPercent = static_cast<float>(lastHealth) / static_cast<float>(lastMaxHealth);
 	const float snappedPercent = std::clamp(std::round(healthPercent * 10.f) / 10.f, 0.f, 1.f);
 	healthBarSprite.setTexture(healthBarTextures[static_cast<int>(snappedPercent * 10.f)]);
 
-	barFill.setSize({
-		(kBarWidth - kBarInsetX * 2.f) * snappedPercent,
-		kBarHeight - kBarInsetY * 2.f
-	});
 }
 
-void HUD::updateFrameAnimation(float dt) {
+void HUD::updateKarmaBar(unsigned int karma, unsigned int maxKarma) {
+	const float karmaPercent = static_cast<float>(karma) / static_cast<float>(maxKarma);
+	const float snappedPercent = std::clamp(std::round(karmaPercent * 10.f) / 10.f, 0.f, 1.f);
+	karmaBarSprite.setTexture(karmaBarTextures[static_cast<int>(snappedPercent * 10.f)]);
+
+
+}
+
+void HUD::updateFrameAnimation(const float dt) {
 	frameTimer += dt;
 	if (frameTimer < kFrameDuration) {
 		return;
