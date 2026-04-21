@@ -37,6 +37,7 @@ Player::Player():
 	doubleJump(false),
 	isFalling(false),
 	isCrouching(false),
+	isHealing(false),
 	deltaTime(0.f),
 	attackPhase(AttackPhase::None),
 	lifeState(LifeState::Alive),
@@ -66,18 +67,12 @@ void Player::handleInput(const sf::Event &event) {
 		switch (event.key.code) {
 			case sf::Keyboard::A:
 			case sf::Keyboard::Left:
-				if (isHealing) {
-					cancelHealing();
-				}
 				isMoving = true;
 				facingRight = false;
 				moveDirection.x = -1.f;
 				break;
 			case sf::Keyboard::D:
 			case sf::Keyboard::Right:
-				if (isHealing) {
-					cancelHealing();
-				}
 				isMoving = true;
 				facingRight = true;
 				moveDirection.x = 1.f;
@@ -85,9 +80,6 @@ void Player::handleInput(const sf::Event &event) {
 			case sf::Keyboard::Space:
 			case sf::Keyboard::W:
 			case sf::Keyboard::Up:
-				if (isHealing) {
-					cancelHealing();
-				}
 				if (isGrounded) {
 					Jump = true;
 					isGrounded = false;
@@ -98,9 +90,6 @@ void Player::handleInput(const sf::Event &event) {
 				break;
 			case sf::Keyboard::S:
 			case sf::Keyboard::Down:
-				if (isHealing) {
-					cancelHealing();
-				}
 				isCrouching = true;
 				break;
 			case sf::Keyboard::X:

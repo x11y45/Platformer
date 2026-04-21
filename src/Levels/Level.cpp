@@ -87,6 +87,7 @@ void Level::load() {
 		std::cerr << "Failed to open level config file: " << levelConfigPath << std::endl;
 		return;
 	}
+
 	std::string line;
 	while (std::getline(configFile, line)) {
 		if (line.empty() || line[0] == '#') {
@@ -126,11 +127,12 @@ void Level::load() {
 				const std::string remainder = key.substr(14);
 				const size_t statsPos = remainder.find(".Stats");
 				const size_t animPos = remainder.find(".Anim.");
+				const size_t attackHitboxPos = remainder.find(".AttackHitbox");
 
 				if (statsPos != std::string::npos && statsPos + 6 == remainder.size()) {
 					const std::string templateName = remainder.substr(0, statsPos);
 					const std::vector<std::string> parts = splitCommaSeparated(value);
-					if (parts.size() != 11) {
+					if (parts.size() != 11 && parts.size() != 12 && parts.size() != 13) {
 						std::cerr << "Invalid enemy stats definition in level config: " << line << std::endl;
 					} else {
 						try {
@@ -145,6 +147,8 @@ void Level::load() {
 							enemyTemplate.jumpStrength = std::stof(parts[6]);
 							enemyTemplate.hitboxSize = {std::stof(parts[7]), std::stof(parts[8])};
 							enemyTemplate.hitboxOffset = {std::stof(parts[9]), std::stof(parts[10])};
+							enemyTemplate.renderScale = parts.size() >= 12 ? std::stof(parts[11]) : 1.f;
+							enemyTemplate.flipWhenFacingRight = parts.size() == 13 ? parseBool(parts[12]) : false;
 						} catch (const std::exception& err) {
 							std::cerr << "Failed to parse enemy stats: " << err.what() << std::endl;
 						}
@@ -158,6 +162,22 @@ void Level::load() {
 						enemyTemplate.animations[animationName] = parseAnimationSpec(value, line);
 					} catch (const std::exception& err) {
 						std::cerr << "Failed to parse enemy animation: " << err.what() << std::endl;
+					}
+				} else if (attackHitboxPos != std::string::npos && attackHitboxPos + 13 == remainder.size()) {
+					const std::string templateName = remainder.substr(0, attackHitboxPos);
+					const std::vector<std::string> parts = splitCommaSeparated(value);
+					if (parts.size() != 4) {
+						std::cerr << "Invalid enemy attack hitbox definition in level config: " << line << std::endl;
+					} else {
+						try {
+							EnemyTemplate& enemyTemplate = config.enemyTemplates[templateName];
+							enemyTemplate.name = templateName;
+							enemyTemplate.attackHitboxOffset = {std::stof(parts[0]), std::stof(parts[1])};
+							enemyTemplate.attackHitboxSize = {std::stof(parts[2]), std::stof(parts[3])};
+							enemyTemplate.hasAttackHitbox = true;
+						} catch (const std::exception& err) {
+							std::cerr << "Failed to parse enemy attack hitbox: " << err.what() << std::endl;
+						}
 					}
 				}
 			} else if (key.rfind("EnemySpawn.", 0) == 0) {

@@ -28,6 +28,7 @@ public:
 
 	void setLevelMap(map* levelMap);
 	void setTargetPlayerPosition(const sf::Vector2f* playerPosition);
+	void setTargetPlayerBounds(const sf::FloatRect* playerBounds);
 	void setId(int id);
 	int getId() const;
 	void setPosition(const sf::Vector2f& worldPosition);
@@ -36,6 +37,13 @@ public:
 	int getDamage() const;
 	int getHealth() const;
 	bool canAttack() const { return definition.canAttack; }
+	bool usesFrameBasedPunchAttack() const;
+	bool isAttackDamageFrameActive() const;
+	bool hasAppliedAttackDamageThisSwing() const;
+	void markAttackDamageApplied();
+	float getAttackRangeMultiplier() const;
+	sf::FloatRect getAttackHitbox() const;
+	bool isFacingRight() const;
 	bool isAlive() const override;
 	bool isDying() const { return !alive && !deathAnimationFinished; }
 	bool animFinished() const { return deathAnimationFinished || animator.isNonLoopEnded(); }
@@ -45,7 +53,6 @@ public:
 	 * @param amount Damage to take
 	 */
 	void takeDamage(int amount);
-	
 	/**
 	 * Called when enemy is hit by a player attack
 	 * Handles visual/audio feedback and applies knockback if applicable
@@ -55,11 +62,21 @@ public:
 	void onHit(int damage, HitboxDirection hitDirection);
 
 private:
+	enum class EnemyActionState {
+		Patrol,
+		Hurt,
+		Attack
+	};
+
 	void updateBounds();
 	void updateAnimation(float dt);
 	void updateDeathAnimation(float dt);
 	void updatePatrolMovement();
 	void updateHitPush(float dt);
+	void resolveMapCollision();
+	void applyConfiguredAnimationState();
+	void applyFacingDirection();
+	bool shouldStartAttack() const;
 	void syncVisuals();
 	
 	// Hit feedback timing (prevents visual spam from multiple hits in same frame)
@@ -77,7 +94,14 @@ private:
 	sf::Vector2f velocity;
 	sf::Vector2f hitPushRemaining;
 	int patrolDirection{1};
+	EnemyActionState actionState{EnemyActionState::Patrol};
+	bool actionAnimationStarted{false};
+	bool attackDamageAppliedThisSwing{false};
+	int attacksCompletedInBurst{0};
+	float attackCooldownRemaining{0.f};
+	float burstRestCooldownRemaining{0.f};
 	const sf::Vector2f* targetPlayerPosition;
+	const sf::FloatRect* targetPlayerBounds{nullptr};
 	map* levelMap;
 	sf::FloatRect bounds;
 	sf::RectangleShape fallbackShape;

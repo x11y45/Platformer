@@ -31,6 +31,8 @@ public:
 	bool hasAnimation(const std::string& name) const { return animations.find(name) != animations.end(); }
 	void playAnimation(const std::string& name, bool loop = true);
 	bool isNonLoopEnded() const { return nonLopingAnimEnded;}
+	int getCurrentFrameIndex() const { return currentFrameIndex; }
+	const std::string& getCurrentAnimationName() const { return currentAnimation; }
 	void ChangeState(AnimState State);
 	void stopAnimation();
 	void update(float dt);

@@ -84,6 +84,7 @@ void Animator::playAnimation(const std::string& name, bool loopAnim) {
 		setFrame();
 	}
 }
+
 void Animator::stopAnimation() {
 	ChangeState(AnimState::None);
 	isPlaying = false;

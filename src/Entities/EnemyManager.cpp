@@ -44,11 +44,13 @@ void EnemyManager::spawnFromMap(map& levelMap) {
 				continue;
 			}
 
+
 			const auto templateIt = templates.find(spawnMarkerIt->second);
 			if (templateIt == templates.end()) {
 				std::cerr << "Enemy template not found for spawn marker " << tile->id << std::endl;
 				continue;
 			}
+
 
 			const sf::FloatRect tileBounds = levelMap.getTileWorldBounds(*tile);
 			auto enemy = std::make_unique<Enemy>(templateIt->second, sf::Vector2f(tileBounds.left, tileBounds.top));
@@ -114,18 +116,37 @@ void EnemyManager::update(float dt, map& levelMap, Player& player) {
 	for (auto& enemy : enemies) {
 		enemy->setLevelMap(&levelMap);
 		enemy->setTargetPlayerPosition(&playerTargetPosition);
+		enemy->setTargetPlayerBounds(&playerBounds);
 		enemy->update(dt);
 
-		if (enemy && enemy->isAlive() && enemy->getDamage() > 0 && enemy->getBounds().intersects(player.getBounds())) {
-			const sf::Vector2f enemyCenter = {
-				enemy->getBounds().left + enemy->getBounds().width * 0.5f,
-				enemy->getBounds().top + enemy->getBounds().height * 0.5f
-			};
-			const sf::Vector2f playerCenter = {
-				player.getBounds().left + player.getBounds().width * 0.5f,
-				player.getBounds().top + player.getBounds().height * 0.5f
-			};
-			const HitboxDirection hitDirection = enemyCenter.x >= playerCenter.x ? HitboxDirection::Right : HitboxDirection::Left;
+		if (!enemy || !enemy->isAlive() || enemy->getDamage() <= 0) {
+			continue;
+		}
+
+		const sf::FloatRect enemyBody = enemy->getBounds();
+		const sf::Vector2f enemyCenter = {
+			enemyBody.left + enemyBody.width * 0.5f,
+			enemyBody.top + enemyBody.height * 0.5f
+		};
+		const sf::Vector2f playerCenter = {
+			playerBounds.left + playerBounds.width * 0.5f,
+			playerBounds.top + playerBounds.height * 0.5f
+		};
+		const HitboxDirection hitDirection = enemyCenter.x >= playerCenter.x ? HitboxDirection::Right : HitboxDirection::Left;
+
+		if (enemy->usesFrameBasedPunchAttack()) {
+			const sf::FloatRect punchHitbox = enemy->getAttackHitbox();
+
+			if (enemy->isAttackDamageFrameActive() &&
+				!enemy->hasAppliedAttackDamageThisSwing() &&
+				punchHitbox.intersects(playerBounds)) {
+				player.takeDamage(enemy->getDamage(), hitDirection);
+				enemy->markAttackDamageApplied();
+			}
+			continue;
+		}
+
+		if (enemyBody.intersects(playerBounds)) {
 			player.takeDamage(enemy->getDamage(), hitDirection);
 		}
 	}

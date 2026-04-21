@@ -17,6 +17,19 @@ namespace {
 	constexpr float kEnemyDetectionRangeX = 2000.f;
 	constexpr float kEnemyDetectionRangeY = 200.f;
 	constexpr float kEnemyPatrolRangeX = 120.f;
+	constexpr float kEnemyAttackRangeX = 80.f;
+	constexpr float kEnemyAttackRangeY = 64.f;
+	/**
+	 * those following constants are specific for the boss, the cooldown, range of attack, and the frames where the attack is active.
+	 */
+	constexpr float kBossPunchRangeMultiplier = 1.5f;
+	constexpr float kBossBurstRestCooldown = 2.f;
+	constexpr int kBossBurstAttackCount = 1;
+	constexpr int kBossAttackActiveStartFrame = 7;
+	constexpr int kBossAttackActiveEndFrame = 9;
+	bool isFrostGuardianTemplate(const EnemyTemplate& definition) {
+		return definition.name == "FrostGuardian";
+	}
 }
 
 Enemy::Enemy()
@@ -32,6 +45,12 @@ Enemy::Enemy()
 	, deathAnimationStarted(false)
 	, deathAnimationFinished(false)
 	, patrolDirection(1)
+	, actionState(EnemyActionState::Patrol)
+	, actionAnimationStarted(false)
+	, attackDamageAppliedThisSwing(false)
+	, attacksCompletedInBurst(0)
+	, attackCooldownRemaining(0.f)
+	, burstRestCooldownRemaining(0.f)
 	, enemyId(-1) {
 	fallbackShape.setFillColor(sf::Color(180, 70, 70, 220));
 }
@@ -54,16 +73,23 @@ void Enemy::configure(const EnemyTemplate& config, const sf::Vector2f& spawnPosi
 	deathAnimationStarted = false;
 	deathAnimationFinished = false;
 	patrolDirection = 1;
+	actionState = EnemyActionState::Patrol;
+	actionAnimationStarted = false;
+	attackDamageAppliedThisSwing = false;
+	attacksCompletedInBurst = 0;
+	attackCooldownRemaining = 0.f;
+	burstRestCooldownRemaining = 0.f;
+	applyConfiguredAnimationState();
 }
 
 void Enemy::load() {
 	if (!definition.animations.empty()) {
 		animator.loadAnimations(definition.animations);
-		animator.setOrigin(0.f, 0.f);
 	}
 
 	fallbackShape.setSize(definition.hitboxSize);
 	fallbackShape.setFillColor(sf::Color(180, 70, 70, 220));
+	applyConfiguredAnimationState();
 	updateBounds();
 	syncVisuals();
 }
@@ -81,6 +107,10 @@ void Enemy::setLevelMap(map* mapPtr) {
 
 void Enemy::setTargetPlayerPosition(const sf::Vector2f* playerPosition) {
 	targetPlayerPosition = playerPosition;
+}
+
+void Enemy::setTargetPlayerBounds(const sf::FloatRect* playerBounds) {
+	targetPlayerBounds = playerBounds;
 }
 
 void Enemy::setId(int id) {
@@ -113,6 +143,63 @@ int Enemy::getHealth() const {
 	return definition.health;
 }
 
+bool Enemy::usesFrameBasedPunchAttack() const {
+	return isFrostGuardianTemplate(definition) && definition.canAttack && animator.hasAnimation("Attack");
+}
+
+bool Enemy::isAttackDamageFrameActive() const {
+	if (!usesFrameBasedPunchAttack() || actionState != EnemyActionState::Attack || !animator.hasAnimation("Attack")) {
+		return false;
+	}
+	if (animator.getCurrentAnimationName() != "Attack") {
+		return false;
+	}
+
+	const int frameNumber = animator.getCurrentFrameIndex() + 1;
+	return frameNumber >= kBossAttackActiveStartFrame && frameNumber <= kBossAttackActiveEndFrame;
+}
+
+bool Enemy::hasAppliedAttackDamageThisSwing() const {
+	return attackDamageAppliedThisSwing;
+}
+
+void Enemy::markAttackDamageApplied() {
+	attackDamageAppliedThisSwing = true;
+}
+
+float Enemy::getAttackRangeMultiplier() const {
+	return usesFrameBasedPunchAttack() ? kBossPunchRangeMultiplier : 1.f;
+}
+
+sf::FloatRect Enemy::getAttackHitbox() const {
+	if (!usesFrameBasedPunchAttack()) {
+		return {};
+	}
+
+	if (definition.hasAttackHitbox && definition.attackHitboxSize.x > 0.f && definition.attackHitboxSize.y > 0.f) {
+		const sf::FloatRect spriteBounds = animator.getBounds();
+		const float scaledWidth = definition.attackHitboxSize.x * definition.renderScale;
+		const float scaledHeight = definition.attackHitboxSize.y * definition.renderScale;
+		const bool isFlipped = definition.flipWhenFacingRight ? facingRight : !facingRight;
+		const float localX = definition.attackHitboxOffset.x * definition.renderScale;
+		const float localY = definition.attackHitboxOffset.y * definition.renderScale;
+		const float hitboxX = isFlipped
+			? spriteBounds.left + spriteBounds.width - localX - scaledWidth
+			: spriteBounds.left + localX;
+		return {hitboxX, spriteBounds.top + localY, scaledWidth, scaledHeight};
+	}
+
+	const float punchRange = bounds.width * getAttackRangeMultiplier();
+	if (facingRight) {
+		return {bounds.left + bounds.width, bounds.top, punchRange, bounds.height};
+	}
+	return {bounds.left - punchRange, bounds.top, punchRange, bounds.height};
+}
+
+bool Enemy::isFacingRight() const {
+	return facingRight;
+}
+
 bool Enemy::isAlive() const {
 	return alive;
 }
@@ -127,6 +214,11 @@ void Enemy::takeDamage(int amount) {
 		alive = false;
 		deathAnimationStarted = false;
 		deathAnimationFinished = !animator.hasAnimation("Death");
+		actionState = EnemyActionState::Patrol;
+		attackDamageAppliedThisSwing = false;
+		attacksCompletedInBurst = 0;
+		attackCooldownRemaining = 0.f;
+		burstRestCooldownRemaining = 0.f;
 	}
 }
 
@@ -144,13 +236,16 @@ void Enemy::updatePatrolMovement() {
 
 void Enemy::onHit(int damage, HitboxDirection hitDirection) {
 	(void)damage;
+	if (!alive) {
+		return;
+	}
 	// Only process feedback if cooldown has elapsed
 	if (timeSinceLastHit > 0.f) {
 		return;
 	}
 
 	// Apply knockback based on hit direction.
-	// Push a short distance away from the player, then let normal AI resume.
+	// Push a short distance away from the hit source.
 	switch (hitDirection) {
 		case HitboxDirection::Right:
 			hitPushRemaining.x = HIT_PUSH_DISTANCE;
@@ -164,8 +259,16 @@ void Enemy::onHit(int damage, HitboxDirection hitDirection) {
 	}
 
 	hitPushRemaining.y = -HIT_PUSH_DISTANCE * 0.2f;
+	if (actionState == EnemyActionState::Attack) {
+		attackDamageAppliedThisSwing = false;
+		attacksCompletedInBurst = 0;
+		attackCooldownRemaining = 0.f;
+	}
+	if (definition.animations.find("Hurt") != definition.animations.end()) {
+		actionState = EnemyActionState::Hurt;
+		actionAnimationStarted = false;
+	}
 
-	// Start cooldown
 	timeSinceLastHit = HIT_FEEDBACK_COOLDOWN;
 }
 
@@ -199,11 +302,111 @@ void Enemy::syncVisuals() {
 	fallbackShape.setPosition(bounds.left, bounds.top);
 }
 
+void Enemy::applyConfiguredAnimationState() {
+	if (!animator.hasAnimations()) {
+		return;
+	}
+
+	animator.setOrigin(0.f, 0.f);
+	animator.setScale(definition.renderScale, definition.renderScale);
+	// Scale hitbox offset and size for visuals
+	definition.hitboxOffset *= definition.renderScale;
+	definition.hitboxSize *= definition.renderScale;
+	applyFacingDirection();
+}
+
+void Enemy::applyFacingDirection() {
+	if (!animator.hasAnimations()) {
+		return;
+	}
+
+	animator.setFlipX(definition.flipWhenFacingRight ? facingRight : !facingRight);
+}
+
+bool Enemy::shouldStartAttack() const {
+	if (!definition.canAttack || !targetPlayerPosition || !animator.hasAnimation("Attack")) {
+		return false;
+	}
+	if (usesFrameBasedPunchAttack() && targetPlayerBounds) {
+		return animator.getBounds().intersects(*targetPlayerBounds);
+	}
+	const float horizontalGap = std::abs(targetPlayerPosition->x - position.x);
+	const float verticalGap = std::abs(targetPlayerPosition->y - position.y);
+	return horizontalGap <= kEnemyAttackRangeX && verticalGap <= kEnemyAttackRangeY;
+}
+
+void Enemy::resolveMapCollision() {
+	if (!levelMap) {
+		return;
+	}
+
+	Collision collisionSystem;
+	CollisionResult collisionResult = collisionSystem.resolveMapCollision(bounds, *levelMap);
+	position.x = collisionResult.correctedPosition.x - definition.hitboxOffset.x;
+	position.y = collisionResult.correctedPosition.y - definition.hitboxOffset.y;
+
+	if (collisionResult.top && velocity.y > 0.f) {
+		velocity.y = 0.f;
+		grounded = true;
+	} else if (!collisionResult.top) {
+		grounded = false;
+	}
+
+	if (collisionResult.bottom && velocity.y < 0.f) {
+		velocity.y = 0.f;
+	}
+
+	if (collisionResult.left || collisionResult.right) {
+		patrolDirection *= -1;
+		velocity.x = static_cast<float>(patrolDirection) * definition.speed;
+		facingRight = patrolDirection > 0;
+	}
+
+	updateBounds();
+}
+
 void Enemy::updateAnimation(float dt) {
 	if (!animator.hasAnimations()) {
 		return;
 	}
-	animator.setFlipX(!facingRight);
+	applyFacingDirection();
+	if (actionState == EnemyActionState::Hurt) {
+		if (!actionAnimationStarted) {
+			if (animator.hasAnimation("Hurt")) {
+				animator.playAnimation("Hurt", false);
+			}
+			actionAnimationStarted = true;
+		}
+		animator.update(dt);
+		if ((animator.hasAnimation("Hurt") && animator.isNonLoopEnded()) || (!animator.hasAnimation("Hurt") && hitPushRemaining.x == 0.f && hitPushRemaining.y == 0.f)) {
+			actionState = EnemyActionState::Patrol;
+			actionAnimationStarted = false;
+		}
+		return;
+	}
+	if (actionState == EnemyActionState::Attack) {
+		if (!actionAnimationStarted) {
+			if (animator.hasAnimation("Attack")) {
+				animator.playAnimation("Attack", false);
+			}
+			actionAnimationStarted = true;
+			attackDamageAppliedThisSwing = false;
+		}
+		animator.update(dt);
+		if ((animator.hasAnimation("Attack") && animator.isNonLoopEnded()) || !animator.hasAnimation("Attack")) {
+			actionState = EnemyActionState::Patrol;
+			actionAnimationStarted = false;
+			if (usesFrameBasedPunchAttack()) {
+				attacksCompletedInBurst++;
+				if (attacksCompletedInBurst >= kBossBurstAttackCount) {
+					burstRestCooldownRemaining = kBossBurstRestCooldown;
+					attacksCompletedInBurst = 0;
+				}
+			}
+			attackDamageAppliedThisSwing = false;
+		}
+		return;
+	}
 	if (!grounded) {
 		if (velocity.y < 0.f) {
 			animator.playAnimation("Jump");
@@ -211,12 +414,17 @@ void Enemy::updateAnimation(float dt) {
 			animator.playAnimation("Fall");
 		}
 	} else if (std::abs(velocity.x) > 0.1f) {
-		animator.playAnimation("Run");
+		if (animator.hasAnimation("Run")) {
+			animator.playAnimation("Run");
+		} else if (animator.hasAnimation("Walk")) {
+			animator.playAnimation("Walk");
+		} else {
+			animator.playAnimation("Idle");
+		}
 	} else {
 		animator.playAnimation("Idle");
 	}
 	animator.update(dt);
-	animator.setPosition(position.x, position.y);
 }
 
 void Enemy::updateDeathAnimation(float dt) {
@@ -233,7 +441,6 @@ void Enemy::updateDeathAnimation(float dt) {
 
 	animator.update(dt);
 	deathAnimationFinished = !animator.hasAnimation("Death") || animator.isNonLoopEnded();
-	animator.setPosition(position.x, position.y);
 }
 
 void Enemy::update(float dt) {
@@ -248,16 +455,34 @@ void Enemy::update(float dt) {
 		timeSinceLastHit -= dt;
 	}
 
+	if (attackCooldownRemaining > 0.f) {
+		attackCooldownRemaining -= dt;
+	}
+	if (burstRestCooldownRemaining > 0.f) {
+		burstRestCooldownRemaining -= dt;
+	}
+
 	if (hitPushRemaining.x != 0.f || hitPushRemaining.y != 0.f) {
 		updateHitPush(dt);
 		updateBounds();
-		if (levelMap) {
-			Collision collisionSystem;
-			CollisionResult collisionResult = collisionSystem.resolveMapCollision(bounds, *levelMap);
-			position.x = collisionResult.correctedPosition.x - definition.hitboxOffset.x;
-			position.y = collisionResult.correctedPosition.y - definition.hitboxOffset.y;
-			updateBounds();
-		}
+		resolveMapCollision();
+		updateAnimation(dt);
+		syncVisuals();
+		return;
+	}
+
+	if (actionState == EnemyActionState::Patrol &&
+		attackCooldownRemaining <= 0.f &&
+		burstRestCooldownRemaining <= 0.f &&
+		shouldStartAttack()) {
+		actionState = EnemyActionState::Attack;
+		actionAnimationStarted = false;
+		attackDamageAppliedThisSwing = false;
+	}
+
+	if (actionState == EnemyActionState::Attack) {
+		velocity = {0.f, 0.f};
+		updateAnimation(dt);
 		syncVisuals();
 		return;
 	}
@@ -291,32 +516,7 @@ void Enemy::update(float dt) {
 
 	position += velocity * dt;
 	updateBounds();
-
-	if (levelMap) {
-		Collision collisionSystem;
-		CollisionResult collisionResult = collisionSystem.resolveMapCollision(bounds, *levelMap);
-		position.x = collisionResult.correctedPosition.x - definition.hitboxOffset.x;
-		position.y = collisionResult.correctedPosition.y - definition.hitboxOffset.y;
-
-		if (collisionResult.top && velocity.y > 0.f) {
-			velocity.y = 0.f;
-			grounded = true;
-		} else if (!collisionResult.top) {
-			grounded = false;
-		}
-
-		if (collisionResult.bottom && velocity.y < 0.f) {
-			velocity.y = 0.f;
-		}
-
-		if (collisionResult.left || collisionResult.right) {
-			patrolDirection *= -1;
-			velocity.x = static_cast<float>(patrolDirection) * definition.speed;
-			facingRight = patrolDirection > 0;
-		}
-
-		updateBounds();
-	}
+	resolveMapCollision();
 
 	updateAnimation(dt);
 	syncVisuals();
@@ -325,8 +525,5 @@ void Enemy::update(float dt) {
 void Enemy::render(sf::RenderTarget& target) {
 	if (animator.hasAnimations()) {
 		animator.render(target);
-		return;
 	}
-
-	target.draw(fallbackShape);
 }

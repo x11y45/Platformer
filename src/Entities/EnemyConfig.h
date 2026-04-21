@@ -22,6 +22,11 @@ struct EnemyTemplate {
 	float jumpStrength{0.f};
 	sf::Vector2f hitboxSize{32.f, 32.f};
 	sf::Vector2f hitboxOffset{0.f, 0.f};
+	sf::Vector2f attackHitboxOffset{0.f, 0.f};
+	sf::Vector2f attackHitboxSize{0.f, 0.f};
+	bool hasAttackHitbox{false};
+	float renderScale{1.f};
+	bool flipWhenFacingRight{false};
 };
 
 #endif //PLATFORMER_ENEMYCONFIG_H

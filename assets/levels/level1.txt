@@ -11,6 +11,7 @@ Tile.2=assets/level1/maps/sliced-tileset/slope.png,SPIKE,false,true,false
 Tile.3=assets/level1/maps/sliced-tileset/under-ground.png,WALL,true,false,false
 Tile.4=assets/level1/maps/sliced-tileset/window.png,COLLECTIBLE,false,false,false
 Tile.90=,EMPTY,false,false,true
+Tile.91=,EMPTY,false,false,true
 
 # Player animations: Player.<AnimationName>=<Path>,<FrameCount>,<FrameDuration>
 Player.Idle=assets/level1/sprites/player/idle.png,4,0.14
@@ -25,12 +26,21 @@ Player.Crouch=assets/level1/sprites/player/crouch.png,2,0.12
 Player.CrouchAttack=assets/level1/sprites/player/crouch-attack.png,5,0.06
 Player.healing=assets/level1/sprites/player/healing.png,9,0.06
 
-# Enemy templates: EnemyTemplate.<Name>.Stats=<Damage>,<Speed>,<Health>,<CanMove>,<CanJump>,<CanAttack>,<JumpStrength>,<HitboxW>,<HitboxH>,<OffsetX>,<OffsetY>
+# Enemy templates: EnemyTemplate.<Name>.Stats=<Damage>,<Speed>,<Health>,<CanMove>,<CanJump>,<CanAttack>,<JumpStrength>,<HitboxW>,<HitboxH>,<OffsetX>,<OffsetY>,<RenderScale>,<FlipWhenFacingRight>
 # EnemyTemplate.<Name>.Anim.<State>=<Path>,<FrameCount>,<FrameDuration>
-EnemyTemplate.Skull.Stats=10,80,3,true,false,false,0,48,32,12,6
-EnemyTemplate.Skull.Anim.Run=assets/level1/sprites/enemies/Skull.png,4,0.12
-EnemyTemplate.Skull.Anim.Death=assets/level1/sprites/enemies/Skull-death.png,21,0.05
+# EnemyTemplate.<Name>.AttackHitbox=<OffsetX>,<OffsetY>,<Width>,<Height>  (sprite-local, unscaled)
+EnemyTemplate.Skull.Stats=10,80,3,true,false,false,0,48,32,12,6,1,false
+EnemyTemplate.Skull.Anim.Run=assets/level1/sprites/enemies/Skull/Skull.png,4,0.12
+EnemyTemplate.Skull.Anim.Death=assets/level1/sprites/enemies/Skull/Skull-death.png,21,0.05
+EnemyTemplate.FrostGuardian.Stats=20,55,20,true,false,true,0,80,80,56,32,2,true
+EnemyTemplate.FrostGuardian.AttackHitbox=3,60,42,20
+EnemyTemplate.FrostGuardian.Anim.Idle=assets/level1/sprites/enemies/frost-guardian/idle.png,6,0.12
+EnemyTemplate.FrostGuardian.Anim.Walk=assets/level1/sprites/enemies/frost-guardian/walk.png,10,0.10
+EnemyTemplate.FrostGuardian.Anim.Attack=assets/level1/sprites/enemies/frost-guardian/attack.png,14,0.06
+EnemyTemplate.FrostGuardian.Anim.Hurt=assets/level1/sprites/enemies/frost-guardian/hurt.png,7,0.08
+EnemyTemplate.FrostGuardian.Anim.Death=assets/level1/sprites/enemies/frost-guardian/death.png,16,0.08
 EnemySpawn.90=Skull
+EnemySpawn.91=FrostGuardian
 
 # Map layers: MapLayer.<LayerName>=<Path>,<ParallaxFactor>
 MapLayer.0=assets/level1/maps/Layers/sky.png,0
