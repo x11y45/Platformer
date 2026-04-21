@@ -26,25 +26,29 @@ public:
 	void render(sf::RenderTarget& target) override;
 	void handleInput(const sf::Event& event) override;
 
-	void setLevelMap(map* levelMap);
-	void setTargetPlayerPosition(const sf::Vector2f* playerPosition);
-	void setTargetPlayerBounds(const sf::FloatRect* playerBounds);
-	void setId(int id);
-	int getId() const;
+	void setLevelMap(map* map_ptr) { this->levelMap = map_ptr; }
+	void setTargetPlayerPosition(const sf::Vector2f* playerPosition) { this->targetPlayerPosition = playerPosition; }
+	void setTargetPlayerBounds(const sf::FloatRect* playerBounds) { this->targetPlayerBounds = playerBounds; }
+
 	void setPosition(const sf::Vector2f& worldPosition);
-	sf::Vector2f getPosition() const;
-	sf::FloatRect getBounds() const;
-	int getDamage() const;
-	int getHealth() const;
-	bool canAttack() const { return definition.canAttack; }
+
 	bool usesFrameBasedPunchAttack() const;
 	bool isAttackDamageFrameActive() const;
 	bool hasAppliedAttackDamageThisSwing() const;
 	void markAttackDamageApplied();
 	float getAttackRangeMultiplier() const;
-	sf::FloatRect getAttackHitbox() const;
-	bool isFacingRight() const;
-	bool isAlive() const override;
+	sf::FloatRect getAttackHitbox() const ;
+	sf::FloatRect getDamageBounds() const;
+
+	void setId(int id) { enemyId = id; }
+	int getId() const { return enemyId; }
+	sf::Vector2f getPosition() const { return position; }
+	sf::FloatRect getBounds() const { return bounds; }
+	int getDamage() const { return definition.damage; }
+	int getHealth() const { return definition.health; }
+	bool canAttack() const { return definition.canAttack; }
+	bool isFacingRight() const { return facingRight; }
+	bool isAlive() const override{ return alive; }
 	bool isDying() const { return !alive && !deathAnimationFinished; }
 	bool animFinished() const { return deathAnimationFinished || animator.isNonLoopEnded(); }
 	
@@ -65,7 +69,8 @@ private:
 	enum class EnemyActionState {
 		Patrol,
 		Hurt,
-		Attack
+		Attack,
+		Idle
 	};
 
 	void updateBounds();

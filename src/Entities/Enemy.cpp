@@ -101,60 +101,20 @@ void Enemy::unload() {
 void Enemy::handleInput(const sf::Event&) {
 }
 
-void Enemy::setLevelMap(map* mapPtr) {
-	levelMap = mapPtr;
-}
-
-void Enemy::setTargetPlayerPosition(const sf::Vector2f* playerPosition) {
-	targetPlayerPosition = playerPosition;
-}
-
-void Enemy::setTargetPlayerBounds(const sf::FloatRect* playerBounds) {
-	targetPlayerBounds = playerBounds;
-}
-
-void Enemy::setId(int id) {
-	enemyId = id;
-}
-
-int Enemy::getId() const {
-	return enemyId;
-}
-
 void Enemy::setPosition(const sf::Vector2f& worldPosition) {
 	position = worldPosition;
 	updateBounds();
 	syncVisuals();
 }
 
-sf::Vector2f Enemy::getPosition() const {
-	return position;
-}
-
-sf::FloatRect Enemy::getBounds() const {
-	return bounds;
-}
-
-int Enemy::getDamage() const {
-	return definition.damage;
-}
-
-int Enemy::getHealth() const {
-	return definition.health;
-}
 
 bool Enemy::usesFrameBasedPunchAttack() const {
 	return isFrostGuardianTemplate(definition) && definition.canAttack && animator.hasAnimation("Attack");
 }
 
 bool Enemy::isAttackDamageFrameActive() const {
-	if (!usesFrameBasedPunchAttack() || actionState != EnemyActionState::Attack || !animator.hasAnimation("Attack")) {
-		return false;
-	}
-	if (animator.getCurrentAnimationName() != "Attack") {
-		return false;
-	}
-
+	if (!usesFrameBasedPunchAttack() || actionState != EnemyActionState::Attack || !animator.hasAnimation("Attack")) {return false;}
+	if (animator.getCurrentAnimationName() != "Attack") {return false;}
 	const int frameNumber = animator.getCurrentFrameIndex() + 1;
 	return frameNumber >= kBossAttackActiveStartFrame && frameNumber <= kBossAttackActiveEndFrame;
 }
@@ -194,14 +154,6 @@ sf::FloatRect Enemy::getAttackHitbox() const {
 		return {bounds.left + bounds.width, bounds.top, punchRange, bounds.height};
 	}
 	return {bounds.left - punchRange, bounds.top, punchRange, bounds.height};
-}
-
-bool Enemy::isFacingRight() const {
-	return facingRight;
-}
-
-bool Enemy::isAlive() const {
-	return alive;
 }
 
 void Enemy::takeDamage(int amount) {
@@ -298,8 +250,6 @@ void Enemy::syncVisuals() {
 		animator.setPosition(position.x, position.y);
 		return;
 	}
-
-	fallbackShape.setPosition(bounds.left, bounds.top);
 }
 
 void Enemy::applyConfiguredAnimationState() {
@@ -319,7 +269,6 @@ void Enemy::applyFacingDirection() {
 	if (!animator.hasAnimations()) {
 		return;
 	}
-
 	animator.setFlipX(definition.flipWhenFacingRight ? facingRight : !facingRight);
 }
 
@@ -327,8 +276,9 @@ bool Enemy::shouldStartAttack() const {
 	if (!definition.canAttack || !targetPlayerPosition || !animator.hasAnimation("Attack")) {
 		return false;
 	}
-	if (usesFrameBasedPunchAttack() && targetPlayerBounds) {
-		return animator.getBounds().intersects(*targetPlayerBounds);
+	auto& targetBounds = targetPlayerBounds;
+	if (usesFrameBasedPunchAttack() && targetBounds) {
+		return animator.getBounds().intersects(*targetBounds);
 	}
 	const float horizontalGap = std::abs(targetPlayerPosition->x - position.x);
 	const float verticalGap = std::abs(targetPlayerPosition->y - position.y);
@@ -379,7 +329,7 @@ void Enemy::updateAnimation(float dt) {
 		}
 		animator.update(dt);
 		if ((animator.hasAnimation("Hurt") && animator.isNonLoopEnded()) || (!animator.hasAnimation("Hurt") && hitPushRemaining.x == 0.f && hitPushRemaining.y == 0.f)) {
-			actionState = EnemyActionState::Patrol;
+			actionState = EnemyActionState::Idle;
 			actionAnimationStarted = false;
 		}
 		return;
@@ -394,7 +344,7 @@ void Enemy::updateAnimation(float dt) {
 		}
 		animator.update(dt);
 		if ((animator.hasAnimation("Attack") && animator.isNonLoopEnded()) || !animator.hasAnimation("Attack")) {
-			actionState = EnemyActionState::Patrol;
+			actionState = EnemyActionState::Idle;
 			actionAnimationStarted = false;
 			if (usesFrameBasedPunchAttack()) {
 				attacksCompletedInBurst++;
@@ -408,10 +358,13 @@ void Enemy::updateAnimation(float dt) {
 		return;
 	}
 	if (!grounded) {
-		if (velocity.y < 0.f) {
+		// the boss does not have MID-AIR animation, so it will use the idle animation when in the air, but other enemies will use jump/fall if available
+		if (animator.hasAnimation("Jump") && velocity.y < 0.f) {
 			animator.playAnimation("Jump");
-		} else {
+		} else if (animator.hasAnimation("Fall") && velocity.y > 0.f) {
 			animator.playAnimation("Fall");
+		} else if (animator.hasAnimation("Idle")) {
+			animator.playAnimation("Idle");
 		}
 	} else if (std::abs(velocity.x) > 0.1f) {
 		if (animator.hasAnimation("Run")) {
@@ -450,17 +403,9 @@ void Enemy::update(float dt) {
 		return;
 	}
 
-	// Update hit feedback cooldown
-	if (timeSinceLastHit > 0.f) {
-		timeSinceLastHit -= dt;
-	}
-
-	if (attackCooldownRemaining > 0.f) {
-		attackCooldownRemaining -= dt;
-	}
-	if (burstRestCooldownRemaining > 0.f) {
-		burstRestCooldownRemaining -= dt;
-	}
+	if (timeSinceLastHit > 0.f) {timeSinceLastHit -= dt;}
+	if (attackCooldownRemaining > 0.f) {attackCooldownRemaining -= dt;}
+	if (burstRestCooldownRemaining > 0.f) {burstRestCooldownRemaining -= dt;}
 
 	if (hitPushRemaining.x != 0.f || hitPushRemaining.y != 0.f) {
 		updateHitPush(dt);
@@ -471,7 +416,8 @@ void Enemy::update(float dt) {
 		return;
 	}
 
-	if (actionState == EnemyActionState::Patrol &&
+	if ((actionState == EnemyActionState::Patrol ||
+		actionState == EnemyActionState::Idle) &&
 		attackCooldownRemaining <= 0.f &&
 		burstRestCooldownRemaining <= 0.f &&
 		shouldStartAttack()) {
@@ -481,21 +427,33 @@ void Enemy::update(float dt) {
 	}
 
 	if (actionState == EnemyActionState::Attack) {
+		// Keep attack facing aligned with the player's side so repeated hit reactions
+		// cannot leave the boss punching in the wrong direction.
+		if (targetPlayerBounds) {
+			const float enemyCenterX = bounds.left + bounds.width * 0.5f;
+			const float playerCenterX = targetPlayerBounds->left + targetPlayerBounds->width * 0.5f;
+			const float deltaX = playerCenterX - enemyCenterX;
+			if (std::abs(deltaX) > 2.f) {
+				facingRight = deltaX > 0.f;
+			}
+		}
 		velocity = {0.f, 0.f};
 		updateAnimation(dt);
 		syncVisuals();
 		return;
 	}
-
+	// If player is in detection range but not in attack range, move towards them. Otherwise, patrol.
 	const bool playerInRange = targetPlayerPosition &&
 		std::abs(targetPlayerPosition->x - position.x) < kEnemyDetectionRangeX &&
 		std::abs(targetPlayerPosition->y - position.y) < kEnemyDetectionRangeY;
+	// If player is in attack range, stop moving to prepare for attack
+	const bool playerInAttackRange = usesFrameBasedPunchAttack() ? shouldStartAttack() : false;
 
-	if (definition.canMove && playerInRange) {
+	if (definition.canMove && playerInRange && !playerInAttackRange) {
 		const float direction = targetPlayerPosition->x >= position.x ? 1.f : -1.f;
 		velocity.x = direction * definition.speed;
 		facingRight = direction > 0.f;
-	} else if (definition.canMove) {
+	} else if (definition.canMove && !playerInRange) {
 		updatePatrolMovement();
 	} else {
 		velocity.x = 0.f;
@@ -508,7 +466,7 @@ void Enemy::update(float dt) {
 			grounded = false;
 		}
 	}
-
+	// Apply gravity
 	velocity.y += kEnemyGravity * dt;
 	if (velocity.y > kEnemyTerminalVelocity) {
 		velocity.y = kEnemyTerminalVelocity;
@@ -517,9 +475,13 @@ void Enemy::update(float dt) {
 	position += velocity * dt;
 	updateBounds();
 	resolveMapCollision();
-
 	updateAnimation(dt);
 	syncVisuals();
+}
+
+sf::FloatRect Enemy::getDamageBounds() const {
+	if (!usesFrameBasedPunchAttack()) return bounds;
+	return {bounds.left, bounds.top, bounds.width, bounds.height/5}; // Use a smaller hitbox for the boss to prevent crouch attack glitch.
 }
 
 void Enemy::render(sf::RenderTarget& target) {

@@ -96,7 +96,7 @@ bool EnemyManager::tryHitEnemy(Enemy* enemy, const AttackInfo& attack) {
 	}
 
 	// Check hitbox intersection
-	if (!attack.hitbox.intersects(enemy->getBounds())) {
+	if (!attack.hitbox.intersects(enemy->getDamageBounds())) {
 		return false;
 	}
 
