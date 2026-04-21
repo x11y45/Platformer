@@ -268,6 +268,9 @@ void Level::update(float dt) {
 	enemyManager.resolvePlayerAttack(player.getAttackInfo());
 	player.finalizeAttackFrame();
 	enemyManager.update(dt, levelMap, player);
+	if (enemyManager.consumeBossDefeatedEvent()) {
+		onPlayerReachGoal();
+	}
 
 	if (!playerDeathNotified && player.isDeathAnimationFinished()) {
 		onPlayerDeath();

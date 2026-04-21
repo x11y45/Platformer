@@ -2,6 +2,7 @@
 #define GAME_HPP
 
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include "GameState.hpp"
 #include "CameraController.hpp"
 #include "UI/MainMenu.h"
@@ -29,6 +30,8 @@ private:
     void startLevel(int levelId);
     
     void changeState(GameState newState);
+    void updateAudioForState();
+    bool loadAudioAssets();
     
 private:
     // Window & Views
@@ -56,6 +59,16 @@ private:
     
     // FPS tracking
     sf::Clock deltaClock;
+
+    // Audio for the game,, there is no time lift to implement a more structured audio system.
+    sf::Music menuMusic;
+    sf::Music levelMusic;
+    sf::SoundBuffer healingBuffer;
+    sf::SoundBuffer hurtBuffer;
+    sf::Sound healingSound;
+    sf::Sound hurtSound;
+    unsigned int lastHealingEventCount{0};
+    unsigned int lastHurtEventCount{0};
 };
 
 #endif // GAME_HPP

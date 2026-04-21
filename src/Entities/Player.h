@@ -75,6 +75,8 @@ public:
 	unsigned int getKarma() const { return karma; }
 	bool isDeathAnimationFinished() const { return lifeState == LifeState::Dead && (!animator.hasAnimation("Death") || animator.isNonLoopEnded()); }
 	bool isAlive() const override { return lifeState != LifeState::Dead; }
+	unsigned int getHealingStartedEvents() const { return healingStartedEvents; }
+	unsigned int getHurtEvents() const { return hurtEvents; }
 
 	// Setters
 	void setHealth(unsigned int health) { this->health = std::min(this->health + health,MAX_HEALTH); }
@@ -136,6 +138,8 @@ private:
 	bool healAnimationStarted;
 	bool attackFacingRight;
 	int attackSequence;
+	unsigned int healingStartedEvents;
+	unsigned int hurtEvents;
 	float deltaTime;
 	
 	// Fixed hitbox inside the full animation frame

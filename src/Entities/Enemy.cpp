@@ -466,6 +466,7 @@ void Enemy::update(float dt) {
 			grounded = false;
 		}
 	}
+
 	// Apply gravity
 	velocity.y += kEnemyGravity * dt;
 	if (velocity.y > kEnemyTerminalVelocity) {

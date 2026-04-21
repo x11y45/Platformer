@@ -43,6 +43,8 @@ Player::Player():
 	lifeState(LifeState::Alive),
 	attackFacingRight(true),
 	attackSequence(0),
+	healingStartedEvents(0),
+	hurtEvents(0),
 	width(kHitboxLocalWidth * kPlayerRenderScale),
 	height(kHitboxLocalHeight * kPlayerRenderScale),
 	hitboxOffset(
@@ -374,6 +376,7 @@ void Player::stopAttack() {
 void Player::beginHurt(HitboxDirection hitDirection) {
 	attackPhase = AttackPhase::None;
 	lifeState = LifeState::Hurt;
+	hurtEvents++;
 	isMoving = false;
 	moveDirection = {0.f, 0.f};
 	Jump = false;
@@ -462,6 +465,7 @@ void Player::startHealing() {
 
 	isHealing = true;
 	healAnimationStarted = false;
+	healingStartedEvents++;
 }
 
 void Player::cancelHealing() {

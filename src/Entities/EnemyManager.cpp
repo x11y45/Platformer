@@ -20,6 +20,7 @@ void EnemyManager::load(
 	nextEnemyId = 0;
 	activeAttackSequence = -1;
 	enemiesHitThisAttack.clear();
+	bossDefeatedEvent = false;
 	spawnFromMap(levelMap);
 }
 
@@ -28,6 +29,7 @@ void EnemyManager::clear() {
 	nextEnemyId = 0;
 	activeAttackSequence = -1;
 	enemiesHitThisAttack.clear();
+	bossDefeatedEvent = false;
 }
 
 void EnemyManager::spawnFromMap(map& levelMap) {
@@ -153,6 +155,9 @@ void EnemyManager::update(float dt, map& levelMap, Player& player) {
 
 	for (auto& enemy : enemies) {
 		if (enemy && !enemy->isAlive() && enemy->animFinished()) {
+			if (enemy->usesFrameBasedPunchAttack()) {
+				bossDefeatedEvent = true;
+			}
 			// increment the players karma for each enemy killed
 			player.setKarma(20);
 		}
@@ -173,4 +178,10 @@ void EnemyManager::render(sf::RenderTarget& target) {
 
 std::size_t EnemyManager::getEnemyCount() const {
 	return enemies.size();
+}
+
+bool EnemyManager::consumeBossDefeatedEvent() {
+	const bool defeated = bossDefeatedEvent;
+	bossDefeatedEvent = false;
+	return defeated;
 }

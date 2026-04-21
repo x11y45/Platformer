@@ -38,6 +38,7 @@ public:
 	void update(float dt, map& levelMap, Player& player);
 	void render(sf::RenderTarget& target);
 	std::size_t getEnemyCount() const;
+	bool consumeBossDefeatedEvent();
 
 private:
 	void spawnFromMap(map& levelMap);
@@ -56,6 +57,7 @@ private:
 	int nextEnemyId{0};
 	int activeAttackSequence{-1};  ///< Current swing ID (prevents multiple hits per swing)
 	std::unordered_set<int> enemiesHitThisAttack;  ///< Enemies already hit in current sequence
+	bool bossDefeatedEvent{false};
 };
 
 #endif //PLATFORMER_ENEMYMANAGER_H

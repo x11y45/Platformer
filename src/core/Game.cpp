@@ -1,4 +1,5 @@
 #include "Game.hpp"
+#include <iostream>
 
 Game::Game()
     : window(sf::VideoMode(800, 600), "GothicVania Platformer")
@@ -18,10 +19,14 @@ Game::Game()
     if (!levelManager.loadLevel(1)) {
         levelManager.loadNextLevel();
     }
+    loadAudioAssets();
     configureCameraForCurrentLevel();
     if (Level* level = getCurrentLevel()) {
         mainMenu.init(level->getMap());
+        lastHealingEventCount = level->player.getHealingStartedEvents();
+        lastHurtEventCount = level->player.getHurtEvents();
     }
+    updateAudioForState();
 }
 
 Level* Game::getCurrentLevel() {
@@ -37,6 +42,11 @@ void Game::startLevel(int levelId) {
         levelManager.startCurrentLevel();
         configureCameraForCurrentLevel();
         currentState = GameState::PLAYING;
+        if (Level* level = getCurrentLevel()) {
+            lastHealingEventCount = level->player.getHealingStartedEvents();
+            lastHurtEventCount = level->player.getHurtEvents();
+        }
+        updateAudioForState();
     }
 }
 
@@ -80,7 +90,7 @@ void Game::processEvents() {
                             startLevel(levelManager.getCurrentLevelId() < 0 ? 1 : levelManager.getCurrentLevelId());
                             break;
                         case MainMenuAction::OpenLevelMenu:
-                            currentState = GameState::LEVEL_MENU;
+                            changeState(GameState::LEVEL_MENU);
                             break;
                         case MainMenuAction::None:
                             break;
@@ -125,7 +135,7 @@ void Game::processEvents() {
                     const LevelMenuAction action = levelMenu.handleInput(worldMousePos);
                     switch (action.type) {
                         case LevelMenuActionType::Back:
-                            currentState = GameState::MAIN_MENU;
+                            changeState(GameState::MAIN_MENU);
                             break;
                         case LevelMenuActionType::SelectLevel:
                             startLevel(action.levelId);
@@ -144,7 +154,7 @@ void Game::processEvents() {
                             changeState(GameState::PLAYING);
                             break;
                         case GameOverScreenAction::MainMenu:
-                            currentState = GameState::MAIN_MENU;
+                            changeState(GameState::MAIN_MENU);
                             break;
                         case GameOverScreenAction::None:
                             break;
@@ -164,8 +174,26 @@ void Game::update(float dt) {
 
         case GameState::PLAYING:
             levelManager.update(dt);
-            if (const Level* level = getCurrentLevel(); level && level->getState() == LevelState::FAILED) {
-                changeState(GameState::GAME_OVER);
+            if (const Level* level = getCurrentLevel(); level) {
+                if (level->getState() == LevelState::FAILED) {
+                    changeState(GameState::GAME_OVER);
+                } else if (level->getState() == LevelState::COMPLETED) {
+                    changeState(GameState::LEVEL_MENU);
+                }
+            }
+            if (Level* level = getCurrentLevel()) {
+                const unsigned int healingEvents = level->player.getHealingStartedEvents();
+                const unsigned int hurtEvents = level->player.getHurtEvents();
+                if (healingEvents != lastHealingEventCount) {
+                    healingSound.stop();
+                    healingSound.play();
+                    lastHealingEventCount = healingEvents;
+                }
+                if (hurtEvents != lastHurtEventCount) {
+                    hurtSound.stop();
+                    hurtSound.play();
+                    lastHurtEventCount = hurtEvents;
+                }
             }
             hud.update(dt, window.mapPixelToCoords(sf::Mouse::getPosition(window), uiView));
             camera.update(dt);
@@ -239,5 +267,58 @@ void Game::changeState(GameState newState) {
     if (newState == GameState::PLAYING) {
         levelManager.startCurrentLevel();
         configureCameraForCurrentLevel();
+        if (Level* level = getCurrentLevel()) {
+            lastHealingEventCount = level->player.getHealingStartedEvents();
+            lastHurtEventCount = level->player.getHurtEvents();
+        }
+    }
+    updateAudioForState();
+}
+
+bool Game::loadAudioAssets() {
+    bool loaded = true;
+    if (!menuMusic.openFromFile("assets/audio/menu.wav")) {
+        std::cerr << "Failed to load menu music: assets/audio/menu.wav\n";
+        loaded = false;
+    }
+    if (!levelMusic.openFromFile("assets/audio/playing.wav")) {
+        std::cerr << "Failed to load level music: assets/audio/playing.wav\n";
+        loaded = false;
+    }
+    if (!healingBuffer.loadFromFile("assets/audio/healing.wav")) {
+        std::cerr << "Failed to load healing sfx: assets/audio/healing.wav\n";
+        loaded = false;
+    }
+    if (!hurtBuffer.loadFromFile("assets/audio/hurt.wav")) {
+        std::cerr << "Failed to load hurt sfx: assets/audio/hurt.wav\n";
+        loaded = false;
+    }
+
+    healingSound.setBuffer(healingBuffer);
+    hurtSound.setBuffer(hurtBuffer);
+    menuMusic.setLoop(true);
+    levelMusic.setLoop(true);
+    return loaded;
+}
+
+void Game::updateAudioForState() {
+    const bool playLevelMusic = currentState == GameState::PLAYING && levelManager.getCurrentLevelId() == 1;
+    const bool playMenuMusic = !playLevelMusic;
+
+    if (playMenuMusic) {
+        if (levelMusic.getStatus() == sf::Music::Playing) {
+            levelMusic.stop();
+        }
+        if (menuMusic.getStatus() != sf::Music::Playing) {
+            menuMusic.play();
+        }
+        return;
+    }
+
+    if (menuMusic.getStatus() == sf::Music::Playing) {
+        menuMusic.stop();
+    }
+    if (levelMusic.getStatus() != sf::Music::Playing) {
+        levelMusic.play();
     }
 }
