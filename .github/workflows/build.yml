@@ -38,12 +38,15 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
 
+      - name: Prepare Release Folder
+        run: |
+          mkdir dist 
+          cp build/Platformer* dist/ 2>/dev/null || cp build/Release/Platformer* dist/ 2>/dev/null || true
+          cp -r build/*.app dist/ 2>/dev/null || true
+          cp -r assets dist/
+          
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Platformer-${{ matrix.os }}
-          path: |
-            build/Platformer*
-            build/Release/Platformer*
-            build/**/*.app
-            assets/
+          name: platformer-build-${{ matrix.os }}
+          path: dist/
