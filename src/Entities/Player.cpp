@@ -1,24 +1,21 @@
-//
-// Created by x11y45 on 4/5/26.
-//
+
+
+
 
 #include "Player.h"
-#include "Levels/map.h"
+#include "map.h"
 #include <algorithm>
 #include <iostream>
 #include <cmath>
 
 namespace {
-	/**
-	 * the constants for player's rendering and hitbox calculations.
-	 * these are based on the original sprite dimensions and animator origin.
-	 **/
+
 	constexpr float kPlayerRenderScale = 2.f;
-	constexpr float kSpriteOriginY = 96.f; // Matches Animator origin (0, 96)
-	constexpr float kHitboxLocalOffsetX = 54.5f; // In unscaled sprite pixels
-	constexpr float kHitboxLocalOffsetY = 52.f; // In unscaled sprite pixels
-	constexpr float kHitboxLocalWidth = 20.f;   // In unscaled sprite pixels
-	constexpr float kHitboxLocalHeight = 45.f;  // In unscaled sprite pixels
+	constexpr float kSpriteOriginY = 96.f;
+	constexpr float kHitboxLocalOffsetX = 54.5f;
+	constexpr float kHitboxLocalOffsetY = 52.f;
+	constexpr float kHitboxLocalWidth = 20.f;
+	constexpr float kHitboxLocalHeight = 45.f;
 }
 
 Player::Player():
@@ -64,7 +61,7 @@ void Player::handleInput(const sf::Event &event) {
 		return;
 	}
 
-	// Event-based input (for actions that should trigger once)
+
 	if (event.type == sf::Event::KeyPressed) {
 		switch (event.key.code) {
 			case sf::Keyboard::A:
@@ -170,7 +167,7 @@ void Player::update(float dt) {
 	if (isMoving) {
 		if (isGrounded && attackPhase == AttackPhase::Active) {
 			stopAttack();
-			attackPhase = AttackPhase::PendingClear; // End attack if player starts moving on ground
+			attackPhase = AttackPhase::PendingClear;
 		}
 		velocity.x = moveDirection.x * speed;
 	} else {
@@ -179,7 +176,7 @@ void Player::update(float dt) {
 
 	if (Jump) {
 		if (doubleJump) {
-			velocity.y = -jumpStrength * 0.8f; // Slightly weaker double jump
+			velocity.y = -jumpStrength * 0.8f;
 		} else {
 			velocity.y = -jumpStrength;
 		}
@@ -191,7 +188,7 @@ void Player::update(float dt) {
 		doubleJump = false;
 	}
 	if (isCrouching) {
-		velocity.x = 0.f; // Can't move while crouching
+		velocity.x = 0.f;
 
 	}
 
@@ -206,7 +203,7 @@ void Player::updateMovementsStates(const CollisionResult& collisionResult) {
 	position.x = collisionResult.correctedPosition.x - hitboxOffset.x;
 	position.y = collisionResult.correctedPosition.y - hitboxOffset.y - crouchShift;
 
-	if (collisionResult.top) { // Collided with the top of a platform (standing on it)
+	if (collisionResult.top) {
 		isGrounded = true;
 		if (velocity.y > 0.f) {
 			velocity.y = 0.f;
@@ -215,7 +212,7 @@ void Player::updateMovementsStates(const CollisionResult& collisionResult) {
 		isGrounded = false;
 	}
 
-	if (collisionResult.bottom && velocity.y < 0.f) { // Collided with the bottom of a platform (hitting head)
+	if (collisionResult.bottom && velocity.y < 0.f) {
 		velocity.y = 0.f;
 	}
 	if (collisionResult.left || collisionResult.right) {
@@ -232,9 +229,9 @@ void Player::updateMovementsStates(const CollisionResult& collisionResult) {
 }
 
 void Player::applyPhysics(float dt) {
-	// Apply gravity
+
 	velocity.y += 980.f * dt;
-	if (velocity.y > 600.f) velocity.y = 600.f; // Terminal velocity
+	if (velocity.y > 600.f) velocity.y = 600.f;
 }
 
 
@@ -313,7 +310,7 @@ void Player::updateAnimation(float dt) {
 		attackPhase = AttackPhase::PendingClear;
 	}
 
-	// Position sprite
+
 	animator.setPosition(position.x, position.y);
 }
 
@@ -432,15 +429,15 @@ HitboxDirection Player::getAttackDirection() const {
 }
 
 sf::FloatRect Player::getAttackBounds() const {
-	// Attack hitbox extends outward from player based on facing direction
+
 	const float attackWidth = bounds.width * ATTACK_RANGE_MULTIPLIER;
 	const float attackHeight = bounds.height;
-	
+
 	if (attackFacingRight) {
-		// Hitbox extends to the right
+
 		return {bounds.left + bounds.width, bounds.top, attackWidth, attackHeight};
 	} else {
-		// Hitbox extends to the left
+
 		return {bounds.left - attackWidth, bounds.top, attackWidth, attackHeight};
 	}
 }

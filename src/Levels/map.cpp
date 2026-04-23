@@ -1,6 +1,6 @@
-//
-// Created by x11y45 on 4/3/26.
-//
+
+
+
 
 #include "map.h"
 #include <fstream>
@@ -45,15 +45,15 @@ bool map::addParallaxLayer(const std::string& filepath, float parallaxFactor, co
 	ParallaxLayer layer;
 	layer.parallaxFactor = parallaxFactor;
 	layer.num = num;
-	
+
 	if (!layer.texture.loadFromFile(filepath)) {
 		std::cerr << "Failed to load parallax layer: " << filepath << std::endl;
 		return false;
 	}
-	
+
 	parallaxLayers.push_back(layer);
 	refreshParallaxTextureBindings();
-	
+
 	return true;
 }
 
@@ -121,11 +121,11 @@ void map::registerTileType(int id, const std::string& imagePath, TileType type, 
 	def.isSolid = isSolid;
 	def.isHarmful = isHarmful;
 	def.isSpawnMarker = isSpawnMarker;
-	
+
 	tileRegistry[id] = def;
-	
-	// Load texture for this tile type
-	if (id != 0 && !imagePath.empty()) { // Don't load texture for empty or marker tiles
+
+
+	if (id != 0 && !imagePath.empty()) {
 		sf::Texture texture;
 		if (texture.loadFromFile(imagePath)) {
 			texture.setSmooth(false);
@@ -152,7 +152,7 @@ void map::configureTileSprite(Tile& tile, const int tileId) {
 	if (textureSize.x == 0 || textureSize.y == 0) {
 		return;
 	}
-	// this one is for scaling the tile sprite to fit the tile size defined in the map, so nothing is more than tile size 16x16.
+
 	const int sourceWidth = static_cast<int>(textureSize.x);
 	const int sourceHeight = static_cast<int>(textureSize.y);
 	tile.sprite.setTextureRect({0, 0, sourceWidth, sourceHeight});
@@ -165,32 +165,32 @@ void map::configureTileSprite(Tile& tile, const int tileId) {
 std::vector<std::vector<int>> map::parseCSV(const std::string& filepath) {
 	std::vector<std::vector<int>> result;
 	std::ifstream file(filepath);
-	
+
 	if (!file.is_open()) {
 		std::cerr << "Failed to open CSV file: " << filepath << std::endl;
 		return result;
 	}
-	
+
 	std::string line;
 	while (std::getline(file, line)) {
 		std::vector<int> row;
 		std::stringstream ss(line);
 		std::string cell;
-		
+
 		while (std::getline(ss, cell, ',')) {
 			try {
 				row.push_back(std::stoi(cell));
 			} catch (const std::exception& e) {
 				std::cerr << "Error parsing CSV cell: " << cell << std::endl;
-				row.push_back(0); // Default to empty
+				row.push_back(0);
 			}
 		}
-		
+
 		if (!row.empty()) {
 			result.push_back(row);
 		}
 	}
-	
+
 	file.close();
 	return result;
 }
@@ -199,14 +199,14 @@ void map::buildTileGrid(const std::vector<std::vector<int>>& csvData) {
 	if (csvData.empty()) {
 		return;
 	}
-	
+
 	const int csvHeight = static_cast<int>(csvData.size());
 	const int csvWidth = static_cast<int>(csvData[0].size());
 	gridHeight = csvHeight;
 	gridWidth = csvWidth;
-	
-	// Initialize grid
-	tileGrid.assign(gridHeight, std::vector<Tile>(gridWidth)); // +2 for safety margin on right edge
+
+
+	tileGrid.assign(gridHeight, std::vector<Tile>(gridWidth));
 	for (int row = 0; row < gridHeight; ++row) {
 		for (int col = 0; col < gridWidth; ++col) {
 			Tile& tile = tileGrid[row][col];
@@ -214,15 +214,15 @@ void map::buildTileGrid(const std::vector<std::vector<int>>& csvData) {
 			tile.gridY = row;
 		}
 	}
-	
-	// Build tiles from CSV data
+
+
 	for (int row = 0; row < csvHeight; ++row) {
 		for (int col = 0; col < csvWidth; ++col) {
 			int tileId = csvData[row][col];
-			
+
 			Tile& tile = tileGrid[row][col];
 			tile.id = tileId;
-			
+
 			if (tileId == 0) {
 				tile.type = TileType::EMPTY;
 			} else if (tileRegistry.count(tileId) > 0) {
@@ -239,38 +239,38 @@ void map::buildTileGrid(const std::vector<std::vector<int>>& csvData) {
 
 bool map::loadFromCSV(const std::string& filepath) {
 	std::vector<std::vector<int>> csvData = parseCSV(filepath);
-	
+
 	if (csvData.empty()) {
 		std::cerr << "CSV data is empty or failed to parse" << std::endl;
 		return false;
 	}
-	
+
 	tileGrid.clear();
 	buildTileGrid(csvData);
 	return true;
 }
 
 void map::renderTiles(sf::RenderTarget& target, const sf::View& cameraView) {
-	// Get camera bounds for culling
+
 	const sf::Vector2f viewCenter = cameraView.getCenter();
 	const sf::Vector2f viewSize = cameraView.getSize();
-	
+
 	const float left = viewCenter.x - viewSize.x / 2.f;
 	const float right = viewCenter.x + viewSize.x / 2.f;
 	const float top = viewCenter.y - viewSize.y / 2.f;
 	const float bottom = viewCenter.y + viewSize.y / 2.f;
-	
-	// Convert to grid coordinates with margin using floor/ceil.
+
+
 	const int startCol = std::max(0, static_cast<int>(std::floor(left / static_cast<float>(tileSize))) - 1);
 	const int endCol = std::min(gridWidth, static_cast<int>(std::ceil(right / static_cast<float>(tileSize))) + 1);
 	const int startRow = std::max(0, static_cast<int>(std::floor(top / static_cast<float>(tileSize))) - 1);
 	const int endRow = std::min(gridHeight, static_cast<int>(std::ceil(bottom / static_cast<float>(tileSize))) + 1);
-	
-	// Render visible tiles only
+
+
 	for (int row = startRow; row < endRow; ++row) {
 		for (int col = startCol; col < endCol; ++col) {
 			const Tile& tile = tileGrid[row][col];
-			
+
 			if (tile.type != TileType::EMPTY && tile.sprite.getTexture()) {
 				target.draw(tile.sprite);
 			}
@@ -281,7 +281,7 @@ void map::renderTiles(sf::RenderTarget& target, const sf::View& cameraView) {
 Tile* map::getTileAt(float x, float y) {
 	const int col = static_cast<int>(x / tileSize);
 	const int row = static_cast<int>(y / tileSize);
-	
+
 	return getTileAtGrid(col, row);
 }
 Tile* map::getTileAtGrid(int col, int row) {
@@ -298,7 +298,7 @@ bool map::isSolidAt(float x, float y) {
 bool map::isHarmfulAt(float x, float y) {
 	Tile* tile = getTileAt(x, y);
 	if (tile && tile->type != TileType::EMPTY) {
-		// Check tile registry for harmful property
+
 		for (const auto& pair : tileRegistry) {
 			if (pair.second.type == tile->type) {
 				return pair.second.isHarmful;
@@ -310,20 +310,20 @@ bool map::isHarmfulAt(float x, float y) {
 
 std::vector<Tile*> map::getCollidingTiles(const sf::FloatRect& bounds) {
 	std::vector<Tile*> collidingTiles;
-	
-	// Convert bounds to grid coordinates
+
+
 	int startCol = static_cast<int>(bounds.left / tileSize);
 	int endCol = static_cast<int>((bounds.left + bounds.width) / tileSize) + 1;
 	int startRow = static_cast<int>(bounds.top / tileSize);
 	int endRow = static_cast<int>((bounds.top + bounds.height) / tileSize) + 1;
-	
-	// Clamp to grid bounds
+
+
 	startCol = std::max(0, startCol);
 	endCol = std::min(gridWidth, endCol);
 	startRow = std::max(0, startRow);
 	endRow = std::min(gridHeight, endRow);
-	
-	// Collect tiles in bounds
+
+
 	for (int row = startRow; row < endRow; ++row) {
 		for (int col = startCol; col < endCol; ++col) {
 			Tile* tile = getTileAtGrid(col, row);
@@ -332,7 +332,7 @@ std::vector<Tile*> map::getCollidingTiles(const sf::FloatRect& bounds) {
 			}
 		}
 	}
-	
+
 	return collidingTiles;
 }
 
@@ -394,7 +394,7 @@ ParallaxLayer map::getParallaxLayer(int index) const {
 		return parallaxLayers[index];
 	}
 	std::cout << "Warning: Requested parallax layer index " << index << " is out of bounds." << std::endl;
-	return {}; // Return empty layer if index is out of bounds
+	return {};
 }
 
 sf::Vector2i map::getGridDimensions() const {

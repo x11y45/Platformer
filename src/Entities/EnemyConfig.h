@@ -1,6 +1,6 @@
-//
-// Created by x11y45 on 4/9/26.
-//
+
+
+
 
 #ifndef PLATFORMER_ENEMYCONFIG_H
 #define PLATFORMER_ENEMYCONFIG_H

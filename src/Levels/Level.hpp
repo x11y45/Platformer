@@ -1,6 +1,6 @@
-//
-// Created by x11y45 on 4/4/26.
-//
+
+
+
 
 #ifndef PLATFORMER_LEVEL_H
 #define PLATFORMER_LEVEL_H
@@ -36,9 +36,9 @@ struct LevelConfig {
 	std::map<std::string, AnimationSpec> Player;
 	std::string playerName;
 	std::map<std::string, AnimationSpec> Enemies;
-	std::map<int,std::pair<std::string, float>> mapLayers; // Layer path + parallax factor
-	float timeLimit;              // Seconds
-	int targetScore;            // the minimum score you need to pass the level
+	std::map<int,std::pair<std::string, float>> mapLayers;
+	float timeLimit;
+	int targetScore;
 };
 
 class Level {
@@ -49,25 +49,25 @@ public:
 	void load();
 
 	void unload();
-	
-	// Game loop methods (default implementations)
+
+
 	void update(float dt);
 	void render(sf::RenderTarget& target, const sf::View& view);
 	void handleInput(const sf::Event& event);
 
-	// Level logic (derived can override)
+
 	bool isCompleted() const;
 	bool isFailed() const;
 	void onPlayerDeath();
 	void onPlayerReachGoal();
-	
-	// State management
+
+
 	void start();
 	void pause();
 	void resume();
 	void reset();
-	
-	// Getters
+
+
 	LevelState getState() const { return state; }
 	int getScore() const { return score; }
 	float getTimeRemaining() const;
@@ -81,7 +81,7 @@ public:
 	const std::string& getConfigPath() const { return levelConfigPath; }
 	sf::Vector2f getPlayerSpawnPoint();
 	sf::Vector2f getGoalPosition();
-	
+
 public:
 
 	void setState(LevelState newState);
@@ -89,12 +89,12 @@ public:
 	void resetTimer();
 	void setConfig(const LevelConfig& cfg);
 	void setConfigPath(const std::string& configPath) { levelConfigPath = configPath; }
-	
-	// Level data
+
+
 	std::string levelConfigPath;
 	LevelConfig config;
 	map levelMap;
-	// Future: EntityManager entityManager;
+
 	Player player;
 	EnemyManager enemyManager;
 	LevelState state;

@@ -1,6 +1,6 @@
-//
-// Created by x11y45 on 4/5/26.
-//
+
+
+
 
 #ifndef PLATFORMER_ANIMATOR_H
 #define PLATFORMER_ANIMATOR_H
@@ -25,7 +25,7 @@ public:
 	Animator();
 	~Animator();
 
-	// Animation management
+
 	void loadAnimations(const std::map<std::string, AnimationSpec>& animations);
 	void addAnimation(const std::string& name, const std::vector<sf::IntRect>& frames, float frameDuration);
 	bool hasAnimation(const std::string& name) const { return animations.find(name) != animations.end(); }
@@ -39,8 +39,8 @@ public:
 	void setFrame();
 
 	AnimState getState() const {return animState;}
-	
-	// Rendering
+
+
 	void render(sf::RenderTarget& target);
 	void setPosition(const float x,const float y){sprite.setPosition(x,y);};
 	void setScale(const float x,const float y){sprite.setScale(x,y);}
@@ -48,7 +48,7 @@ public:
 	void setFlipX(bool flipped);
 	sf::FloatRect getBounds() const;
 	bool hasAnimations() const { return !animations.empty(); }
-	
+
 private:
 	AnimState animState;
 	std::map<std::string, Animation> animations;
@@ -58,7 +58,7 @@ private:
 	int currentFrameIndex;
 	bool isPlaying;
 	bool loop;
-	bool nonLopingAnimEnded{true}; // For non-looping animations, track if they've reached the end
+	bool nonLopingAnimEnded{true};
 	bool flipX = false;
 	sf::Sprite sprite;
 };

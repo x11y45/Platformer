@@ -1,6 +1,6 @@
-//
-// Created by x11y45 on 4/3/26.
-//
+
+
+
 
 #ifndef PLATFORMER_MAP_H
 #define PLATFORMER_MAP_H
@@ -46,8 +46,8 @@ struct ParallaxLayer {
 class map {
 public:
 	map();
-	
-	// Parallax layer management
+
+
 	bool addParallaxLayer(const std::string& filepath, float parallaxFactor, const int& num);
 	void updateParallax(const sf::Vector2f& cameraPosition, const sf::Vector2f& cameraViewSize);
 	void renderParallax(sf::RenderTarget& target, bool renderBackground = true);
@@ -56,25 +56,25 @@ public:
 		const std::map<int, TileDefinition>& tileDefinitions,
 		const std::map<int,std::pair<std::string, float>>& layerFiles
 	);
-	
-	// Tile system
+
+
 	void registerTileType(int id, const std::string& imagePath, TileType type, bool isSolid, bool isHarmful, bool isSpawnMarker = false);
 	bool loadFromCSV(const std::string& filepath);
 	void renderTiles(sf::RenderTarget& target, const sf::View& cameraView);
-	
-	// Tile queries
+
+
 	Tile* getTileAt(float x, float y);
 	Tile* getTileAtGrid(int col, int row);
 	bool isSolidAt(float x, float y);
 	bool isHarmfulAt(float x, float y);
 	std::vector<Tile*> getCollidingTiles(const sf::FloatRect& bounds);
 	sf::FloatRect getTileWorldBounds(const Tile& tile) const;
-	
-	// main functions
+
+
 	void update(const sf::View& cameraView);
 	void render(sf::RenderTarget& target, const sf::View& cameraView);
-	
-	// Utilities
+
+
 	int getParallaxLayerCount() const;
 	void setLayerParallaxFactor(int index, float factor);
 	ParallaxLayer getParallaxLayer(int index) const;
@@ -82,21 +82,21 @@ public:
 	void clear();
 	int getTileSize() const;
 	sf::Vector2i getGridDimensions() const;
-	
+
 private:
-	// Parallax layers
+
 	std::vector<ParallaxLayer> parallaxLayers;
 	sf::Vector2f lastCameraPos;
-	
-	// Tile grid
+
+
 	std::map<int, TileDefinition> tileRegistry;
 	std::map<int, sf::Texture> tileTextures;
 	std::vector<std::vector<Tile>> tileGrid;
 	int tileSize;
 	int gridWidth;
 	int gridHeight;
-	
-	// Helper methods
+
+
 	void buildTileGrid(const std::vector<std::vector<int>>& csvData);
 	std::vector<std::vector<int>> parseCSV(const std::string& filepath);
 	bool isTileSolid(const Tile& tile) const;

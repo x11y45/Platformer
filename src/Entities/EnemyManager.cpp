@@ -1,10 +1,10 @@
-//
-// Created by x11y45 on 4/9/26.
-//
+
+
+
 
 #include "EnemyManager.h"
 #include "Player.h"
-#include "Levels/map.h"
+#include "map.h"
 #include <algorithm>
 #include <iostream>
 #include <utility>
@@ -64,20 +64,20 @@ void EnemyManager::spawnFromMap(map& levelMap) {
 }
 
 void EnemyManager::resolvePlayerAttack(const AttackInfo& attack) {
-	// If attack is inactive, reset tracking
+
 	if (!attack.active) {
 		activeAttackSequence = -1;
 		enemiesHitThisAttack.clear();
 		return;
 	}
 
-	// If this is a new attack sequence, reset who we've hit
+
 	if (attack.sequence != activeAttackSequence) {
 		activeAttackSequence = attack.sequence;
 		enemiesHitThisAttack.clear();
 	}
 
-	// Try to hit each alive enemy
+
 	for (auto& enemy : enemies) {
 		if (enemy && enemy->isAlive()) {
 			tryHitEnemy(enemy.get(), attack);
@@ -91,24 +91,24 @@ bool EnemyManager::tryHitEnemy(Enemy* enemy, const AttackInfo& attack) {
 	}
 
 	const int enemyId = enemy->getId();
-	
-	// Skip if already hit in this sequence
+
+
 	if (enemiesHitThisAttack.count(enemyId) > 0) {
 		return false;
 	}
 
-	// Check hitbox intersection
+
 	if (!attack.hitbox.intersects(enemy->getDamageBounds())) {
 		return false;
 	}
 
-	// Apply damage and feedback
+
 	enemy->takeDamage(attack.damage);
 	enemy->onHit(attack.damage, attack.direction);
-	
-	// Mark as hit so we don't hit it again this sequence
+
+
 	enemiesHitThisAttack.insert(enemyId);
-	
+
 	return true;
 }
 
@@ -158,7 +158,7 @@ void EnemyManager::update(float dt, map& levelMap, Player& player) {
 			if (enemy->usesFrameBasedPunchAttack()) {
 				bossDefeatedEvent = true;
 			}
-			// increment the players karma for each enemy killed
+
 			player.setKarma(20);
 		}
 	}

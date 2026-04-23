@@ -24,9 +24,24 @@ FetchContent_MakeAvailable(SFML)
 # ─────────────────────────────────────────────────────────────────────
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.cpp")
-add_executable(Platformer ${SOURCES})
 
-target_include_directories(Platformer PRIVATE src/)
+if(APPLE)
+    add_executable(Platformer MACOSX_BUNDLE ${SOURCES})
+else()
+    add_executable(Platformer ${SOURCES})
+endif()
+
+if(NOT BUILD_SHARED_LIBS)
+    target_compile_definitions(Platformer PRIVATE SFML_STATIC)
+endif()
+target_include_directories(Platformer PRIVATE
+        src/
+        src/core
+        src/Entities
+        src/Levels
+        src/Physics
+        src/UI
+)
 
 target_link_libraries(Platformer
         sfml-graphics

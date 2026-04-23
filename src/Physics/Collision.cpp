@@ -1,6 +1,6 @@
-//
-// Created by x11y45 on 4/8/26.
-//
+
+
+
 
 #include "Collision.h"
 #include <cmath>
@@ -41,7 +41,7 @@ CollisionResult Collision::resolveMapCollision(const sf::FloatRect& bounds, map&
 
 	sf::FloatRect resolvedBounds = bounds;
 
-	// Multiple passes keep side and corner resolution stable with dense tile stacks.
+
 	for (int pass = 0; pass < 3; ++pass) {
 		bool resolvedAnyOverlap = false;
 		const auto collidingTiles = levelMap.getCollidingTiles(resolvedBounds);

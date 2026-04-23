@@ -1,6 +1,6 @@
-//
-// Created by x11y45 on 4/8/26.
-//
+
+
+
 
 #ifndef PLATFORMER_COLLISION_H
 #define PLATFORMER_COLLISION_H
@@ -10,8 +10,8 @@
 
 struct CollisionResult {
 	bool collided{false};
-	bool top{false};    // Floor contact (player was pushed up)
-	bool bottom{false}; // Ceiling contact (player was pushed down)
+	bool top{false};
+	bool bottom{false};
 	bool left{false};
 	bool right{false};
 	bool isHarmful{false};

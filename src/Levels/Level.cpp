@@ -1,6 +1,6 @@
-//
-// Created by x11y45 on 4/4/26.
-//
+
+
+
 
 #include "Level.hpp"
 #include <sstream>
@@ -81,7 +81,7 @@ void Level::load() {
 	levelMap.clear();
 	enemyManager.clear();
 	playerDeathNotified = false;
-	// Load Level configuration from file txt
+
 	std::ifstream configFile(levelConfigPath);
 	if (!configFile.is_open()) {
 		std::cerr << "Failed to open level config file: " << levelConfigPath << std::endl;
@@ -91,7 +91,7 @@ void Level::load() {
 	std::string line;
 	while (std::getline(configFile, line)) {
 		if (line.empty() || line[0] == '#') {
-			continue; // Skip empty lines and comments
+			continue;
 		}
 
 		size_t delimiterPos = line.find('=');
@@ -106,22 +106,22 @@ void Level::load() {
 			} else if (key.rfind("Tile.", 0) == 0) {
 				const std::string idText = key.substr(5);
 				const std::vector<std::string> parts = splitCommaSeparated(value);
-				if (parts.size() != 4 && parts.size() != 5) {
-					std::cerr << "Invalid tile definition in level config: " << line << std::endl;
-				} else {
-					try {
-						const int tileId = std::stoi(idText);
-						TileDefinition definition;
-						definition.id = tileId;
-						definition.imagePath = parts[0];
-						definition.type = parseTileType(parts[1]);
-						definition.isSolid = parseBool(parts[2]);
-						definition.isHarmful = parseBool(parts[3]);
-						definition.isSpawnMarker = parts.size() == 5 ? parseBool(parts[4]) : false;
-						config.tileDefinitions[tileId] = definition;
-					} catch (const std::exception& err) {
-						std::cerr << "Failed to parse tile definition: " << err.what() << std::endl;
+				try {
+					if (parts.size() != 4 && parts.size() != 5) {
+						throw std::runtime_error("Invalid tile definition in level config: " + line);
 					}
+
+					const int tileId = std::stoi(idText);
+					TileDefinition definition;
+					definition.id = tileId;
+					definition.imagePath = parts[0];
+					definition.type = parseTileType(parts[1]);
+					definition.isSolid = parseBool(parts[2]);
+					definition.isHarmful = parseBool(parts[3]);
+					definition.isSpawnMarker = parts.size() == 5 ? parseBool(parts[4]) : false;
+					config.tileDefinitions[tileId] = definition;
+				} catch (const std::exception& err) {
+					std::cerr << "Failed to parse tile definition: " << err.what() << std::endl;
 				}
 			} else if (key.rfind("EnemyTemplate.", 0) == 0) {
 				const std::string remainder = key.substr(14);
@@ -132,26 +132,26 @@ void Level::load() {
 				if (statsPos != std::string::npos && statsPos + 6 == remainder.size()) {
 					const std::string templateName = remainder.substr(0, statsPos);
 					const std::vector<std::string> parts = splitCommaSeparated(value);
-					if (parts.size() != 11 && parts.size() != 12 && parts.size() != 13) {
-						std::cerr << "Invalid enemy stats definition in level config: " << line << std::endl;
-					} else {
-						try {
-							EnemyTemplate& enemyTemplate = config.enemyTemplates[templateName];
-							enemyTemplate.name = templateName;
-							enemyTemplate.damage = std::stoi(parts[0]);
-							enemyTemplate.speed = std::stof(parts[1]);
-							enemyTemplate.health = std::stoi(parts[2]);
-							enemyTemplate.canMove = parseBool(parts[3]);
-							enemyTemplate.canJump = parseBool(parts[4]);
-							enemyTemplate.canAttack = parseBool(parts[5]);
-							enemyTemplate.jumpStrength = std::stof(parts[6]);
-							enemyTemplate.hitboxSize = {std::stof(parts[7]), std::stof(parts[8])};
-							enemyTemplate.hitboxOffset = {std::stof(parts[9]), std::stof(parts[10])};
-							enemyTemplate.renderScale = parts.size() >= 12 ? std::stof(parts[11]) : 1.f;
-							enemyTemplate.flipWhenFacingRight = parts.size() == 13 ? parseBool(parts[12]) : false;
-						} catch (const std::exception& err) {
-							std::cerr << "Failed to parse enemy stats: " << err.what() << std::endl;
+					try {
+						if (parts.size() != 11 && parts.size() != 12 && parts.size() != 13) {
+							throw std::runtime_error("Invalid enemy stats definition in level config: " + line);
 						}
+
+						EnemyTemplate& enemyTemplate = config.enemyTemplates[templateName];
+						enemyTemplate.name = templateName;
+						enemyTemplate.damage = std::stoi(parts[0]);
+						enemyTemplate.speed = std::stof(parts[1]);
+						enemyTemplate.health = std::stoi(parts[2]);
+						enemyTemplate.canMove = parseBool(parts[3]);
+						enemyTemplate.canJump = parseBool(parts[4]);
+						enemyTemplate.canAttack = parseBool(parts[5]);
+						enemyTemplate.jumpStrength = std::stof(parts[6]);
+						enemyTemplate.hitboxSize = {std::stof(parts[7]), std::stof(parts[8])};
+						enemyTemplate.hitboxOffset = {std::stof(parts[9]), std::stof(parts[10])};
+						enemyTemplate.renderScale = parts.size() >= 12 ? std::stof(parts[11]) : 1.f;
+						enemyTemplate.flipWhenFacingRight = parts.size() == 13 ? parseBool(parts[12]) : false;
+					} catch (const std::exception& err) {
+						std::cerr << "Failed to parse enemy stats: " << err.what() << std::endl;
 					}
 				} else if (animPos != std::string::npos) {
 					const std::string templateName = remainder.substr(0, animPos);
@@ -166,18 +166,18 @@ void Level::load() {
 				} else if (attackHitboxPos != std::string::npos && attackHitboxPos + 13 == remainder.size()) {
 					const std::string templateName = remainder.substr(0, attackHitboxPos);
 					const std::vector<std::string> parts = splitCommaSeparated(value);
-					if (parts.size() != 4) {
-						std::cerr << "Invalid enemy attack hitbox definition in level config: " << line << std::endl;
-					} else {
-						try {
-							EnemyTemplate& enemyTemplate = config.enemyTemplates[templateName];
-							enemyTemplate.name = templateName;
-							enemyTemplate.attackHitboxOffset = {std::stof(parts[0]), std::stof(parts[1])};
-							enemyTemplate.attackHitboxSize = {std::stof(parts[2]), std::stof(parts[3])};
-							enemyTemplate.hasAttackHitbox = true;
-						} catch (const std::exception& err) {
-							std::cerr << "Failed to parse enemy attack hitbox: " << err.what() << std::endl;
+					try {
+						if (parts.size() != 4) {
+							throw std::runtime_error("Invalid enemy attack hitbox definition in level config: " + line);
 						}
+
+						EnemyTemplate& enemyTemplate = config.enemyTemplates[templateName];
+						enemyTemplate.name = templateName;
+						enemyTemplate.attackHitboxOffset = {std::stof(parts[0]), std::stof(parts[1])};
+						enemyTemplate.attackHitboxSize = {std::stof(parts[2]), std::stof(parts[3])};
+						enemyTemplate.hasAttackHitbox = true;
+					} catch (const std::exception& err) {
+						std::cerr << "Failed to parse enemy attack hitbox: " << err.what() << std::endl;
 					}
 				}
 			} else if (key.rfind("EnemySpawn.", 0) == 0) {
@@ -193,21 +193,21 @@ void Level::load() {
 			} else if (key == "targetScore") {
 				config.targetScore = std::stoi(value);
 			} else if (key.rfind("Player.", 0) == 0) {
-				std::string animName = key.substr(7); // Remove "Player."
+				std::string animName = key.substr(7);
 				try {
 					config.Player[animName] = parseAnimationSpec(value, line);
 				} catch (const std::exception& err) {
 					std::cerr << "Failed to parse player animation: " << err.what() << std::endl;
 				}
 			} else if (key.rfind("Enemy.", 0) == 0) {
-				std::string enemyName = key.substr(6); // Remove "Enemy."
+				std::string enemyName = key.substr(6);
 				try {
 					config.Enemies[enemyName] = parseAnimationSpec(value, line);
 				} catch (const std::exception& err) {
 					std::cerr << "Failed to parse enemy animation: " << err.what() << std::endl;
 				}
 			} else if (key.rfind("MapLayer.", 0) == 0) {
-				int layerNum = std::stoi(key.substr(9)); // Remove "MapLayer."
+				int layerNum = std::stoi(key.substr(9));
 				size_t layerDelimiter = value.find(',');
 				if (layerDelimiter != std::string::npos) {
 					std::string layerPath = value.substr(0, layerDelimiter);
@@ -282,19 +282,19 @@ void Level::update(float dt) {
 
 
 void Level::render(sf::RenderTarget& target, const sf::View& view) {
-	// Render map (parallax + tiles)
+
 	levelMap.render(target, view);
 
-	// Render player
+
 	enemyManager.render(target);
 	player.render(target);
 }
 
 void Level::handleInput(const sf::Event& event) {
-	// Pass input to player
+
 	player.handleInput(event);
-	
-	// Level-specific input
+
+
 	if (event.type == sf::Event::KeyPressed) {
 		if (event.key.code == sf::Keyboard::F3) {
 			debugMode = !debugMode;
@@ -303,19 +303,19 @@ void Level::handleInput(const sf::Event& event) {
 }
 
 bool Level::isCompleted() const {
-	// Default: Level is completed when target score is reached
-	// Derived classes can override for custom win conditions
+
+
 	if (config.targetScore > 0) {
 		return score >= config.targetScore;
 	}
-	
-	// If no target score, level completion must be triggered manually
-	// (e.g., player reaches goal position, handled by game logic)
+
+
+
 	return false;
 }
 bool Level::isFailed() const {
-	// Default: No failure condition
-	// Derived classes can override (e.g., too many deaths, specific events)
+
+
 	return state == LevelState::FAILED;
 }
 
@@ -357,7 +357,7 @@ void Level::reset() {
 
 float Level::getTimeRemaining() const {
 	if (config.timeLimit <= 0) {
-		return -1.0f; // No time limit
+		return -1.0f;
 	}
 	return std::max(0.0f, static_cast<float>(config.timeLimit) - timeElapsed);
 }
@@ -365,7 +365,7 @@ float Level::getTimeRemaining() const {
 void Level::setState(LevelState newState) {
 	if (state != newState) {
 		state = newState;
-		
+
 		if (debugMode) {
 			std::cout << "Level state changed to: ";
 			switch (newState) {
@@ -386,7 +386,7 @@ void Level::setConfig(const LevelConfig& cfg) {
 void Level::addScore(int points) {
 	score += points;
 	if (score < 0) {
-		score = 0; // Don't allow negative scores
+		score = 0;
 	}
 }
 

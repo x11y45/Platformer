@@ -77,11 +77,11 @@ void Game::processEvents() {
         if (event.type == sf::Event::Closed) {
             window.close();
         }
-        
+
         sf::Vector2i mousePos = sf::Mouse::getPosition(window);
         sf::Vector2f worldMousePos = window.mapPixelToCoords(mousePos, uiView);
 
-        // Handle state-specific input
+
         switch (currentState) {
             case GameState::MAIN_MENU:
                 if (event.type == sf::Event::MouseButtonPressed) {
@@ -199,15 +199,15 @@ void Game::update(float dt) {
             camera.update(dt);
             worldView = camera.getView();
             break;
-            
+
         case GameState::PAUSED:
             pauseMenu.update(dt, window.mapPixelToCoords(sf::Mouse::getPosition(window), uiView));
             break;
-            
+
         case GameState::LEVEL_MENU:
             levelMenu.update(dt, window.mapPixelToCoords(sf::Mouse::getPosition(window), uiView));
             break;
-            
+
         case GameState::GAME_OVER:
             gameOverScreen.update(dt, window.mapPixelToCoords(sf::Mouse::getPosition(window), uiView));
             break;
@@ -215,45 +215,45 @@ void Game::update(float dt) {
 }
 void Game::render() {
     window.clear(sf::Color(20, 20, 35));
-    
+
     switch (currentState) {
         case GameState::MAIN_MENU:
             window.setView(uiView);
             mainMenu.render(window);
             break;
-            
+
         case GameState::PLAYING:
-            // Render world
+
             window.setView(worldView);
 
-            // Render map (parallax + tiles)
+
             levelManager.render(window, worldView);
-            
-            // Render UI
+
+
             window.setView(uiView);
             if (const Level* level = getCurrentLevel()) {
                 hud.render(window,  level->player);
             }
             break;
-            
+
         case GameState::PAUSED:
-            // Render world (frozen)
+
             window.setView(worldView);
             levelManager.render(window, worldView);
             window.setView(uiView);
             if (const Level* level = getCurrentLevel()) {
                 hud.render(window,  level->player);
             }
-            // Render pause overlay
+
             window.setView(uiView);
             pauseMenu.render(window);
             break;
-            
+
         case GameState::LEVEL_MENU:
             window.setView(uiView);
             levelMenu.render(window);
             break;
-            
+
         case GameState::GAME_OVER:
             window.setView(uiView);
             gameOverScreen.render(window);

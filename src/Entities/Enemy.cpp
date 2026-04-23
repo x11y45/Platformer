@@ -1,17 +1,13 @@
-//
-// Created by x11y45 on 4/9/26.
-//
+
+
+
 
 #include "Enemy.h"
-#include "Levels/map.h"
+#include "map.h"
 #include <cmath>
 
 namespace {
-	/**
-	 * this is the constants of the enemy
-	 * the firs two are for physics, the @kEnemyDetectionRangeX/Y are for player tracking, if the player is within those ranges the enemy will start chasing him.
-	 * the @kEnemyPatrolRangeX is how far the enemy will go from his home position before turning around, this is the behavior when the player is out of range.
-	 */
+
 	constexpr float kEnemyGravity = 1500.f;
 	constexpr float kEnemyTerminalVelocity = 200.f;
 	constexpr float kEnemyDetectionRangeX = 2000.f;
@@ -19,9 +15,7 @@ namespace {
 	constexpr float kEnemyPatrolRangeX = 120.f;
 	constexpr float kEnemyAttackRangeX = 80.f;
 	constexpr float kEnemyAttackRangeY = 64.f;
-	/**
-	 * those following constants are specific for the boss, the cooldown, range of attack, and the frames where the attack is active.
-	 */
+
 	constexpr float kBossPunchRangeMultiplier = 1.5f;
 	constexpr float kBossBurstRestCooldown = 2.f;
 	constexpr int kBossBurstAttackCount = 1;
@@ -191,13 +185,13 @@ void Enemy::onHit(int damage, HitboxDirection hitDirection) {
 	if (!alive) {
 		return;
 	}
-	// Only process feedback if cooldown has elapsed
+
 	if (timeSinceLastHit > 0.f) {
 		return;
 	}
 
-	// Apply knockback based on hit direction.
-	// Push a short distance away from the hit source.
+
+
 	switch (hitDirection) {
 		case HitboxDirection::Right:
 			hitPushRemaining.x = HIT_PUSH_DISTANCE;
@@ -259,7 +253,7 @@ void Enemy::applyConfiguredAnimationState() {
 
 	animator.setOrigin(0.f, 0.f);
 	animator.setScale(definition.renderScale, definition.renderScale);
-	// Scale hitbox offset and size for visuals
+
 	definition.hitboxOffset *= definition.renderScale;
 	definition.hitboxSize *= definition.renderScale;
 	applyFacingDirection();
@@ -358,7 +352,7 @@ void Enemy::updateAnimation(float dt) {
 		return;
 	}
 	if (!grounded) {
-		// the boss does not have MID-AIR animation, so it will use the idle animation when in the air, but other enemies will use jump/fall if available
+
 		if (animator.hasAnimation("Jump") && velocity.y < 0.f) {
 			animator.playAnimation("Jump");
 		} else if (animator.hasAnimation("Fall") && velocity.y > 0.f) {
@@ -427,8 +421,8 @@ void Enemy::update(float dt) {
 	}
 
 	if (actionState == EnemyActionState::Attack) {
-		// Keep attack facing aligned with the player's side so repeated hit reactions
-		// cannot leave the boss punching in the wrong direction.
+
+
 		if (targetPlayerBounds) {
 			const float enemyCenterX = bounds.left + bounds.width * 0.5f;
 			const float playerCenterX = targetPlayerBounds->left + targetPlayerBounds->width * 0.5f;
@@ -442,11 +436,11 @@ void Enemy::update(float dt) {
 		syncVisuals();
 		return;
 	}
-	// If player is in detection range but not in attack range, move towards them. Otherwise, patrol.
+
 	const bool playerInRange = targetPlayerPosition &&
 		std::abs(targetPlayerPosition->x - position.x) < kEnemyDetectionRangeX &&
 		std::abs(targetPlayerPosition->y - position.y) < kEnemyDetectionRangeY;
-	// If player is in attack range, stop moving to prepare for attack
+
 	const bool playerInAttackRange = usesFrameBasedPunchAttack() ? shouldStartAttack() : false;
 
 	if (definition.canMove && playerInRange && !playerInAttackRange) {
@@ -467,7 +461,7 @@ void Enemy::update(float dt) {
 		}
 	}
 
-	// Apply gravity
+
 	velocity.y += kEnemyGravity * dt;
 	if (velocity.y > kEnemyTerminalVelocity) {
 		velocity.y = kEnemyTerminalVelocity;
@@ -482,7 +476,7 @@ void Enemy::update(float dt) {
 
 sf::FloatRect Enemy::getDamageBounds() const {
 	if (!usesFrameBasedPunchAttack()) return bounds;
-	return {bounds.left, bounds.top, bounds.width, bounds.height/5}; // Use a smaller hitbox for the boss to prevent crouch attack glitch.
+	return {bounds.left, bounds.top, bounds.width, bounds.height/5};
 }
 
 void Enemy::render(sf::RenderTarget& target) {

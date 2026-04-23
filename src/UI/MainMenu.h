@@ -1,6 +1,6 @@
-//
-// Created by x11y45 on 4/2/26.
-//
+
+
+
 #ifndef PLATFORMER_MAINMENU_H
 #define PLATFORMER_MAINMENU_H
 #include "SFML/Graphics.hpp"

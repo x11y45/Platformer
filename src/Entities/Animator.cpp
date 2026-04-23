@@ -1,6 +1,6 @@
-//
-// Created by x11y45 on 4/5/26.
-//
+
+
+
 
 #include "Animator.h"
 
@@ -71,8 +71,8 @@ void Animator::addAnimation(const std::string& name, const std::vector<sf::IntRe
 }
 
 void Animator::playAnimation(const std::string& name, bool loopAnim) {
-	if (currentAnimation == name && isPlaying) return; // Already playing
-	
+	if (currentAnimation == name && isPlaying) return;
+
 	if (animations.find(name) != animations.end() && textures.find(name) != textures.end()) {
 		currentAnimation = name;
 		this->loop = loopAnim;

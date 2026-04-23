@@ -25,8 +25,8 @@ private:
 	void updateFrameAnimation(float dt);
 
 	sf::Texture sheetTexture;
-	std::vector<sf::Texture> healthBarTextures; // 0-10 health frames
-	std::vector<sf::Texture> karmaBarTextures; // 0-10 karma frames
+	std::vector<sf::Texture> healthBarTextures;
+	std::vector<sf::Texture> karmaBarTextures;
 	sf::Sprite frameSprite;
 	sf::Sprite healthBarSprite;
 	sf::Sprite karmaBarSprite;

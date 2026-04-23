@@ -44,8 +44,9 @@ EnemySpawn.91=FrostGuardian
 
 # Map layers: MapLayer.<LayerName>=<Path>,<ParallaxFactor>
 MapLayer.0=assets/level1/maps/Layers/sky.png,0
-MapLayer.1=assets/level1/maps/Layers/far-mountains.png,0.3
-MapLayer.2=assets/level1/maps/Layers/middle-mountains.png,0.5
-MapLayer.3=assets/level1/maps/Layers/far-trees.png,0.8
-MapLayer.4=assets/level1/maps/Layers/myst.png,1.0
-MapLayer.5=assets/level1/maps/Layers/near-trees.png,1.2
+MapLayer.1=assets/level1/maps/Layers/clouds.png,0.15
+MapLayer.2=assets/level1/maps/Layers/far-mountains.png,0.3
+MapLayer.3=assets/level1/maps/Layers/middle-mountains.png,0.5
+MapLayer.4=assets/level1/maps/Layers/far-trees.png,0.8
+MapLayer.5=assets/level1/maps/Layers/myst.png,1.0
+MapLayer.6=assets/level1/maps/Layers/near-trees.png,1.2

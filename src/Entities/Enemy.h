@@ -1,6 +1,6 @@
-//
-// Created by x11y45 on 4/9/26.
-//
+
+
+
 
 #ifndef PLATFORMER_ENEMY_H
 #define PLATFORMER_ENEMY_H
@@ -51,18 +51,10 @@ public:
 	bool isAlive() const override{ return alive; }
 	bool isDying() const { return !alive && !deathAnimationFinished; }
 	bool animFinished() const { return deathAnimationFinished || animator.isNonLoopEnded(); }
-	
-	/**
-	 * Inflicts damage on the enemy
-	 * @param amount Damage to take
-	 */
+
+
 	void takeDamage(int amount);
-	/**
-	 * Called when enemy is hit by a player attack
-	 * Handles visual/audio feedback and applies knockback if applicable
-	 * @param damage Damage taken in this hit
-	 * @param hitDirection Direction the hit came from (for knockback/visual effects)
-	 */
+
 	void onHit(int damage, HitboxDirection hitDirection);
 
 private:
@@ -83,12 +75,12 @@ private:
 	void applyFacingDirection();
 	bool shouldStartAttack() const;
 	void syncVisuals();
-	
-	// Hit feedback timing (prevents visual spam from multiple hits in same frame)
+
+
 	float timeSinceLastHit{0.f};
 	constexpr static float HIT_FEEDBACK_COOLDOWN = 1.f;
 
-	// Attack constant
+
 	constexpr static float	HIT_PUSH_DISTANCE = 50.f;
 	constexpr static float HIT_PUSH_SPEED = 200.f;
 
