@@ -39,11 +39,27 @@ jobs:
         run: cmake --build build --config Release
 
       - name: Prepare Release Folder
+        shell: bash
         run: |
-          mkdir dist 
-          cp build/Platformer* dist/ 2>/dev/null || cp build/Release/Platformer* dist/ 2>/dev/null || true
-          cp -r build/*.app dist/ 2>/dev/null || true
-          cp -r assets dist/
+            # Créer le dossier dist (le -p évite les erreurs s'il existe déjà)
+            mkdir -p dist
+            
+            # 1. Chercher et copier l'exécutable (Linux ou Windows)
+            # On cherche dans build/ et build/Release/
+            find build -maxdepth 2 -name "Platformer*" -type f -exec cp {} dist/ \;
+            
+            # 2. Chercher et copier le bundle Mac (.app) s'il existe
+            if [ -d build/Platformer.app ]; then
+              cp -r build/Platformer.app dist/
+            fi
+            
+            # 3. Copier le dossier assets
+            if [ -d assets ]; then
+              cp -r assets dist/
+            fi
+            
+            # Vérification simple pour le log
+            ls -R dist/
           
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
