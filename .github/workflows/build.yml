@@ -64,5 +64,5 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: platformer-build-${{ matrix.os }}
+          name: platformer-${{ matrix.os }}
           path: dist/
